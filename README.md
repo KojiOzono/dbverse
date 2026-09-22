@@ -18,7 +18,9 @@
 
 - Python 3.10+
 - （PostgreSQLを使う場合）PostgreSQL サーバー
-- （Text-to-SQLを使う場合）OpenAI互換APIのLLMサーバー
+- （Text-to-SQLを使う場合）OpenAI互換APIのLLM
+  - ローカル: llama-server, Ollama, vLLM, LM Studio
+  - クラウド: OpenAI, Gemini, Anthropic, Groq, OpenRouter 等
 
 ## セットアップ
 
@@ -32,7 +34,7 @@
 
 ブラウザで http://localhost:8888 を開く。
 
-`config.py` でPostgreSQL接続やLLMサーバーを設定できる。デフォルトはSQLite（サンプルデータ付き）。
+`config.py` でDB接続とLLMを設定できる。デフォルトはSQLite（サンプルデータ付き）で、そのまま起動すれば試せる。
 
 ## 使い方
 

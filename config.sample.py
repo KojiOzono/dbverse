@@ -50,12 +50,16 @@ DB = {
 #  自然言語機能（Text-to-SQL）を使う場合に設定します。
 #  SQLモード（手書き）だけ使う場合は、空のままで動作します。
 #
+#  OpenAI互換APIなら何でも使えます：
+#    ローカル : llama-server, Ollama, vLLM, LM Studio
+#    クラウド : OpenAI, Gemini, Anthropic, Groq, OpenRouter 等
+#
 #  url:
 #    OpenAI互換APIのエンドポイント
 #
 #  path:
 #    APIのパス。省略時は "/v1/chat/completions"。
-#    通常は省略でよい。
+#    Gemini のみ "/chat/completions"。
 #
 #  model:
 #    使用するモデル名
@@ -69,6 +73,10 @@ DB = {
 #  api_key:
 #    "Authorization: Bearer <api_key>" として送信される。
 #    認証不要なサーバー（llama-server 等）なら空 "" でOK。
+#
+#  cache_prompt:
+#    プロンプトキャッシュを使うか。
+#    llama-server は True（省略可）、クラウドは False。
 # ═══════════════════════════════════════════════════════════
 
 # --- 使わない場合（デフォルト） ---
@@ -80,7 +88,7 @@ LLM = {
     "api_key":   "",
 }
 
-# --- llama-server 等のローカルLLMを使う場合 ---
+# --- ローカルLLM（llama-server 等） ---
 # LLM = {
 #     "url":       "http://localhost:9999",
 #     "model":     "your_model_name",
@@ -89,7 +97,17 @@ LLM = {
 #     "api_key":   "",
 # }
 
-# --- Gemini（OpenAI互換エンドポイント）を使う場合 ---
+# --- OpenAI ---
+# LLM = {
+#     "url":       "https://api.openai.com",
+#     "model":     "gpt-4o-mini",
+#     "n_predict": 512,
+#     "timeout":   300.0,
+#     "api_key":   "sk-...",
+#     "cache_prompt": False,
+# }
+
+# --- Gemini ---
 # LLM = {
 #     "url":       "https://generativelanguage.googleapis.com/v1beta/openai",
 #     "path":      "/chat/completions",
@@ -99,6 +117,38 @@ LLM = {
 #     "api_key":   "AIza...",
 #     "cache_prompt": False,
 # }
+
+# --- Anthropic ---
+# LLM = {
+#     "url":       "https://api.anthropic.com",
+#     "path":      "/v1/chat/completions",
+#     "model":     "claude-sonnet-4",
+#     "n_predict": 512,
+#     "timeout":   300.0,
+#     "api_key":   "sk-ant-...",
+#     "cache_prompt": False,
+# }
+
+# --- Groq（無料枠あり、高速） ---
+# LLM = {
+#     "url":       "https://api.groq.com/openai",
+#     "model":     "llama-3.3-70b-versatile",
+#     "n_predict": 512,
+#     "timeout":   300.0,
+#     "api_key":   "gsk_...",
+#     "cache_prompt": False,
+# }
+
+# --- OpenRouter（多数のモデルを1つのAPIで） ---
+# LLM = {
+#     "url":       "https://openrouter.ai/api",
+#     "model":     "anthropic/claude-3.5-sonnet",
+#     "n_predict": 512,
+#     "timeout":   300.0,
+#     "api_key":   "sk-or-...",
+#     "cache_prompt": False,
+# }
+
 
 # ═══════════════════════════════════════════════════════════
 #  サーバー
