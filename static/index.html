@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DBVERSE</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SQL / 自然言語 バー（画面上部）
+     ═══════════════════════════════════════════════════════════ -->
+<div id="sqlbar">
+  <div id="sqlmodes">
+    <button data-mode="sql" class="active">SQL</button>
+    <button data-mode="ask">自然言語</button>
+  </div>
+
+  <div id="sqlhist"></div>
+
+  <div id="sqlrow">
+    <div id="sqlprompt">›</div>
+    <textarea id="sqlinput" rows="1" spellcheck="false"
+      placeholder="SELECT * FROM users LIMIT 20;   —   Ctrl+Enter で実行"></textarea>
+    <textarea id="askinput" rows="1" spellcheck="false"
+      placeholder="例: usersテーブルの件数は？   —   Ctrl+Enter で実行"
+      style="display:none"></textarea>
+  </div>
+
+  <div id="sqlmeta">
+    <span id="sqlstatus">準備完了</span>
+    <span class="sp"></span>
+    <span><b>↑↓</b> 履歴 &nbsp; <b>Tab</b> 補完 &nbsp; <b>Ctrl+Enter</b> 実行</span>
+    <button id="sql-select" disabled title="選択中テーブルのSELECT文を生成">選択テーブルのSELECT文</button>
+    <button id="sql-format" title="SQLを整形 (Alt+F)">⤦ 整形</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     3D ER図キャンバス
+     ═══════════════════════════════════════════════════════════ -->
+<canvas id="c"></canvas>
+
+<!-- ═══════════════════════════════════════════════════════════
+     2D ER図
+     ═══════════════════════════════════════════════════════════ -->
+<div id="er2d">
+  <div id="er2d-viewport">
+    <svg id="er2d-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="er2d-cards"></div>
+  </div>
+  <div id="er2d-hint">ドラッグ 移動 &nbsp; ホイール ズーム &nbsp; クリック 開く</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     サイドバー
+     ═══════════════════════════════════════════════════════════ -->
+<div id="sidebar">
+
+  <div class="sb-sec sb-er">
+    <div class="hdr" id="er-link">
+      <span>ER図</span>
+      <button id="btn-reset-layout" class="hdr-btn"
+        title="2Dレイアウトを初期配置に戻す">⟲</button>
+    </div>
+    <div id="view-toggle">
+      <button data-view="3d" class="active">3D</button>
+      <button data-view="2d">2D</button>
+    </div>
+  </div>
+
+  <div class="sb-sec sb-tables">
+    <div class="hdr">
+      <span>テーブル</span>
+      <span class="cnt" id="table-count"></span>
+      <button id="btn-shorten" class="active"
+        title="共通プレフィックスを省略">✂</button>
+    </div>
+    <div id="tlist-body"></div>
+  </div>
+
+  <div class="sb-sec sb-cols">
+    <div class="hdr">
+      <span>テーブル項目</span>
+      <span class="cnt" id="col-count"></span>
+    </div>
+    <div id="clist-body">
+      <div class="empty">テーブルを選択してください</div>
+    </div>
+  </div>
+
+  <div id="sidebar-db"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     データビュー
+     ═══════════════════════════════════════════════════════════ -->
+<div id="dataview">
+
+  <div id="dv-head">
+    <span id="dv-name">—</span>
+    <span id="dv-meta"></span>
+    <span class="spacer"></span>
+    <input id="dv-filter" placeholder="絞り込み…">
+
+    <button class="dbtn icon" id="dv-add" title="行を追加">＋</button>
+
+    <div class="dd">
+      <button class="dbtn icon" id="dv-cols-btn" title="列の表示/非表示">☰</button>
+      <div class="dd-panel" id="dv-cols-panel"></div>
+    </div>
+
+    <button class="dbtn icon" id="dv-density" title="密度切替 (D)">≡</button>
+    <button class="dbtn icon" id="dv-zebra" title="縞模様 (Z)">▤</button>
+    <button class="dbtn icon" id="dv-refresh" title="再読込 (R)">↻</button>
+
+    <div class="dd">
+      <button class="dbtn icon primary" id="dv-export-btn"
+        title="エクスポート">⇩</button>
+      <div class="dd-panel" id="dv-export-panel">
+        <div class="dd-item" data-exp="csv">CSV (選択/全)</div>
+        <div class="dd-item" data-exp="tsv">TSV (選択/全)</div>
+        <div class="dd-item" data-exp="json">JSON (選択/全)</div>
+        <div class="dd-item" data-exp="sql">INSERT SQL (選択/全)</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dv-tabs">
+    <div class="vtab active" data-view="data">データ</div>
+    <div class="vtab" data-view="result" id="vtab-result" style="display:none">
+      結果<span class="cnt" id="vtab-result-cnt">0</span>
+    </div>
+    <span class="spacer"></span>
+    <div id="dv-selinfo"></div>
+  </div>
+
+  <div id="dv-panes">
+    <div class="dvpane active" id="pane-data">
+      <div id="dv-body">
+        <div id="dv-loading"><div class="spin"></div>読み込み中…</div>
+      </div>
+    </div>
+    <div class="dvpane" id="pane-result">
+      <div id="dv-result-body"></div>
+    </div>
+  </div>
+
+  <div id="dv-foot">
+    <div id="foot-data">
+      <button class="pg" id="pg-first">«</button>
+      <button class="pg" id="pg-prev">‹</button>
+      <span id="pg-info">—</span>
+      <button class="pg" id="pg-next">›</button>
+      <button class="pg" id="pg-last">»</button>
+      <span class="spacer"></span>
+      <span id="dv-hidden-note"></span>
+      <span>表示行</span>
+      <select id="dv-limit">
+        <option selected>100</option><option>500</option>
+        <option>1000</option><option>2000</option><option>5000</option>
+      </select>
+      <span id="dv-foot-right"></span>
+    </div>
+    <div id="foot-result" style="display:none">
+      <span id="result-foot-info"></span>
+      <span class="spacer"></span>
+      <button class="dbtn" id="qresult-copy">コピー</button>
+      <button class="dbtn danger" id="qresult-clear">クリア</button>
+    </div>
+  </div>
+</div>
+
+<!-- 3D操作のヒント -->
+<div id="hint">
+  <div><b>ドラッグ</b> 回転 &nbsp; <b>ホイール</b> ズーム &nbsp; <b>右ドラッグ</b> パン</div>
+  <div><b>ダブルクリック</b> フィット &nbsp; <b>F</b> 全体 &nbsp; <b>ESC</b> 戻る</div>
+</div>
+
+<div id="ctx"></div>
+<div id="toast"></div>
+<div id="boot"><h1>DBVERSE</h1><p>起動中…</p></div>
+
+<div id="cellview">
+  <div class="box">
+    <div class="head">
+      <span class="col" id="cellview-col">—</span>
+      <span class="len" id="cellview-len"></span>
+      <span class="sp"></span>
+      <button id="cellview-copy">コピー</button>
+      <button id="cellview-close">閉じる (ESC)</button>
+    </div>
+    <div class="body" id="cellview-body"></div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="/static/main.js"></script>
+
+</body>
+</html>
