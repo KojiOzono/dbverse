@@ -1042,7 +1042,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         prompt = (get_llm_system() + "\n\nschema:\n" + schema_str +
                         "\n\nq: " + q + "\na: ")
-        url = LLM["url"].rstrip("/") + "/v1/chat/completions"
+        url = LLM["url"].rstrip("/") + LLM.get("path", "/v1/chat/completions")
         headers = _get_llm_headers()
 
         full_text = []
@@ -1055,7 +1055,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": LLM["n_predict"],
                     "temperature": 0.0,
-                    "cache_prompt": True,
+                    **({"cache_prompt": True} if LLM.get("cache_prompt", True) else {}),
                     "stream": True,
                 }) as resp:
                     resp.raise_for_status()
@@ -1173,7 +1173,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         prompt = (get_llm_system() + "\n\nschema:\n" + schema_str +
                   "\n\nq: " + q + "\na: ")
-        url = LLM["url"].rstrip("/") + "/v1/chat/completions"
+        url = LLM["url"].rstrip("/") + LLM.get("path", "/v1/chat/completions")
         headers = _get_llm_headers()
         
         payload = {
@@ -1181,7 +1181,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": LLM["n_predict"],
             "temperature": 0.0,
-            "cache_prompt": True,
+            **({"cache_prompt": True} if LLM.get("cache_prompt", True) else {}),
         }
 
         t0 = time.perf_counter()

@@ -51,7 +51,11 @@ DB = {
 #  SQLモード（手書き）だけ使う場合は、空のままで動作します。
 #
 #  url:
-#    OpenAI互換APIのエンドポイント（例: "http://localhost:9999"）
+#    OpenAI互換APIのエンドポイント
+#
+#  path:
+#    APIのパス。省略時は "/v1/chat/completions"。
+#    通常は省略でよい。
 #
 #  model:
 #    使用するモデル名
@@ -76,15 +80,25 @@ LLM = {
     "api_key":   "",
 }
 
-# --- 使う場合は、上をコメントアウトして以下を使う ---
+# --- llama-server 等のローカルLLMを使う場合 ---
 # LLM = {
 #     "url":       "http://localhost:9999",
 #     "model":     "your_model_name",
 #     "n_predict": 512,
 #     "timeout":   300.0,
-#     "api_key":   "sk-your-key",
+#     "api_key":   "",
 # }
 
+# --- Gemini（OpenAI互換エンドポイント）を使う場合 ---
+# LLM = {
+#     "url":       "https://generativelanguage.googleapis.com/v1beta/openai",
+#     "path":      "/chat/completions",
+#     "model":     "gemini-3.5-flash",
+#     "n_predict": 512,
+#     "timeout":   300.0,
+#     "api_key":   "AIza...",
+#     "cache_prompt": False,
+# }
 
 # ═══════════════════════════════════════════════════════════
 #  サーバー
