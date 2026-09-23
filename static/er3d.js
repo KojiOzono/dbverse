@@ -6,7 +6,6 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { state, er2d, truncate, api, shortenName } from './main.js';
 
-const MAX_COLS  = 20;
 const CARD_W    = 7.0;
 const TEX_W     = 768;
 const HEADER_PX = 100;
@@ -311,15 +310,11 @@ function makeERTexture(t, texH) {
 
     g.fillStyle = iconColor;
     g.font = '22px "SF Mono","Courier New",monospace';
-    if (isFK) { g.shadowColor = '#a06bff'; g.shadowBlur = 14; }
     g.fillText(icon, 26, y);
-    g.shadowBlur = 0;
 
-    g.fillStyle = isPK ? '#ffd166' : (isFK ? '#d9b8ff' : '#cfe6f5');
+    g.fillStyle = isPK ? '#ffd166' : (isFK ? '#c9a0ff' : '#cfe6f5');
     g.font = (isPK ? 'bold ' : '') + '22px "SF Mono","Courier New",monospace';
-    if (isFK) { g.shadowColor = '#a06bff'; g.shadowBlur = 12; }
     g.fillText(truncate(c.name, 22), 60, y);
-    g.shadowBlur = 0;
 
     if (c.notnull && !isPK) {
       g.fillStyle = '#ff8ba0';
@@ -333,22 +328,8 @@ function makeERTexture(t, texH) {
     g.fillText(c.type, TEX_W - 26, y);
     g.textAlign = 'left';
 
-    if (isFK) {
-      g.fillStyle = '#c9a0ff';
-      g.font = '13px "SF Mono","Courier New",monospace';
-      g.shadowColor = '#a06bff';
-      g.shadowBlur = 8;
-      g.fillText('→ ' + fk.to_table + '.' + fk.to_col, 60, y + 17);
-      g.shadowBlur = 0;
-    }
     y += ROW_PX;
   });
-
-  if (t.columns.length > MAX_COLS) {
-    g.fillStyle = '#5a7c96';
-    g.font = 'italic 20px "SF Mono","Courier New",monospace';
-    g.fillText('+ ' + (t.columns.length - MAX_COLS) + ' more…', 60, y);
-  }
 
   const tex = new THREE.CanvasTexture(cv);
   tex.anisotropy = (state.renderer && state.renderer.capabilities)
@@ -487,7 +468,6 @@ export function animate() {
   const dt = Math.min(state.clock.getDelta(), 0.05);
   const t = state.clock.elapsedTime;
   if (er2d.mode === '3d') {
-    // カード：ビルボード化
     state.erCards.forEach(c => {
       c.plane.quaternion.copy(state.camera.quaternion);
       c.hover = THREE.MathUtils.lerp(c.hover, c.hoverTarget || 0, dt*8);
@@ -503,7 +483,6 @@ export function animate() {
       c.ring.scale.set(rs, rs, rs);
     });
 
-    // FK線：表示中のものだけ列位置に追従
     state.fkLines.forEach(b => {
       if (!b.mesh.visible) return;
 
@@ -511,7 +490,6 @@ export function animate() {
       const dstCard = state.erCards.find(c => c.name === b.to);
       if (!srcCard || !dstCard) return;
 
-      // カードの現在の回転（ビルボード）を反映した列のワールド位置
       const srcLocalY = columnLocalY(b.fromTable, b.fromCol);
       const dstLocalY = columnLocalY(b.toTable, b.toCol);
 
@@ -533,13 +511,11 @@ export function animate() {
       const p2 = new THREE.Vector3(
         p0.x + dx * 0.70 + perpX * bend, midY, p0.z + dz * 0.70 + perpZ * bend);
 
-      // 曲線の制御点を更新
       b.curve.points[0].copy(p0);
       b.curve.points[1].copy(p1);
       b.curve.points[2].copy(p2);
       b.curve.points[3].copy(p3);
 
-      // チューブ形状を再生成（可視中の数本のみ）
       b.mesh.geometry.dispose();
       b.mesh.geometry = new THREE.TubeGeometry(b.curve, 40, 0.06, 6, false);
 
