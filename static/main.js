@@ -454,6 +454,16 @@ async function boot() {
   document.getElementById('boot').classList.add('hide');
   document.getElementById('sqlinput').focus();
 
+    // ── 実行ボタン → Ctrl+Enter を発火 ──
+  document.getElementById('sql-run')?.addEventListener('click', () => {
+    const mode = document.querySelector('#sqlmodes .active')?.dataset.mode ?? 'sql';
+    const ta = document.getElementById(mode === 'ask' ? 'askinput' : 'sqlinput');
+    if (!ta) return;
+    ta.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter', code: 'Enter', ctrlKey: true,
+      bubbles: true, cancelable: true,
+    }));
+  });
   // ここから先はバックグラウンド（画面はもう見えている）
   (async () => {
     try {

@@ -817,3 +817,36 @@ canvas{display:block;position:fixed;inset:0}
   border-color:#4de8ff !important;
   box-shadow:0 0 28px #0cf9,0 12px 40px #000e !important;
 }
+
+
+#sql-run {
+  background: transparent;
+  color: #c9d1d9;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  transition: background .15s, border-color .15s;
+}
+#sql-run .ico {
+  color: #3fb950;
+  display: block;          /* SVGをブロック化して余白を消す */
+  flex: 0 0 auto;
+}
+#sql-run .lbl {
+  line-height: 1;
+}
+#sql-run .lbl b { color: #ffd166; }
+
+#sql-run:hover {
+  background: rgba(63,185,80,0.10);
+  border-color: rgba(63,185,80,0.6);
+}
+#sql-run:active { background: rgba(63,185,80,0.22); }
+#sql-run:disabled { opacity: .4; cursor: default; }
