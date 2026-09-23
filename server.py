@@ -38,19 +38,24 @@ except ImportError:
 # 既存コードとの互換のため CONFIG に格納
 CONFIG = CONFIG_DB
 
-
 LLM_SYSTEM_POSTGRES = """あなたはPostgreSQLのアシスタント。
 質問に答える。SQLで答えられるなら SELECT 文を1つだけ出力する。
 余計な前置きや説明は書かない。SQLのみを出力し、絶対に 'sql:' などのプレフィックスを付けない。
 
 ルール:
-- 識別子はダブルクォートで囲む（例: "users"）
+- SELECT または WITH で始まる文のみ出力する
+- psql のメタコマンド（\\d 等）や SHOW は使わない
+- 識別子・予約語はダブルクォートで囲む
 - LIMIT を必ず付ける
 - テーブル一覧は information_schema.tables を使う
+- テーブル定義は information_schema.columns を使う
 
 例:
-q: usersテーブルの件数を教えて
+q: usersテーブルの件数
 SELECT COUNT(*) FROM "users";
+
+q: usersテーブルの列定義
+SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='users' ORDER BY ordinal_position;
 
 q: テーブル一覧
 SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;
@@ -61,18 +66,25 @@ LLM_SYSTEM_SQLITE = """あなたはSQLiteのアシスタント。
 余計な前置きや説明は書かない。SQLのみを出力し、絶対に 'sql:' などのプレフィックスを付けない。
 
 ルール:
-- 識別子はダブルクォートで囲む（例: "users"）
+- SELECT または WITH で始まる文のみ出力する
+- PRAGMA は使わない。SELECT * FROM pragma_xxx(...) を使う
+- 識別子・予約語はダブルクォートで囲む
 - LIMIT を必ず付ける
 - テーブル一覧は sqlite_master を使う
 
+注意: 以下の列名は予約語なので必ずダブルクォートで囲む
+  "notnull", "table", "from", "to", "unique", "index", "key", "order", "group", "values"
+
 例:
-q: usersテーブルの件数を教えて
+q: usersテーブルの件数
 SELECT COUNT(*) FROM "users";
+
+q: usersテーブルの列定義
+SELECT "cid", "name", "type", "notnull", "dflt_value", "pk" FROM pragma_table_info("users");
 
 q: テーブル一覧
 SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;
 """
-
 
 def get_llm_system():
     """DB方言に応じたシステムプロンプトを返す"""
