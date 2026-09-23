@@ -619,6 +619,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         p = parsed.path
         if p in ("/", "/index.html"):
             self._serve_static("index.html")
+        elif p in ("/m", "/m.html"):
+            self._serve_static("m.html")
         elif p.startswith("/static/"):
             self._serve_static(p[len("/static/"):])
         elif p == "/api/schema":

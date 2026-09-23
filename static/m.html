@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DBVERSE mobile</title>
+
+<script>
+(function () {
+  if (new URLSearchParams(location.search).get('force') === 'mobile') return;
+  if (document.cookie.indexOf('view=mobile') !== -1) return;
+  if (window.innerWidth > 820) location.replace('/');
+})();
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+  }
+}
+</script>
+
+<link rel="stylesheet" href="/static/m.css">
+</head>
+<body>
+
+<header id="hdr">
+  <button id="btn-back" aria-label="戻る" disabled>‹</button>
+  <h1 id="hdr-title">DBVERSE</h1>
+  <span id="hdr-sub"></span>
+</header>
+
+<main id="main">
+
+  <!-- メニュー -->
+  <section class="view active" data-view="menu">
+    <button class="menu-item" data-goto="tables">
+      <span class="ico">📋</span>
+      <span class="label">テーブル一覧</span>
+      <span class="cnt" id="menu-table-count"></span>
+    </button>
+    <button class="menu-item" data-goto="er">
+      <span class="ico">📊</span>
+      <span class="label">ER図</span>
+    </button>
+    <button class="menu-item" data-goto="ask">
+      <span class="ico">💬</span>
+      <span class="label">自然言語で質問</span>
+    </button>
+    <div class="db-info" id="db-info"></div>
+  </section>
+
+  <!-- ER図 -->
+<section class="view" data-view="er">
+  <div id="er-toolbar">
+    <div id="er-view-toggle">
+      <button data-erview="2d" class="active">2D</button>
+      <button data-erview="3d">3D</button>
+    </div>
+    <button id="er-fit" title="全体表示">⤢</button>
+    <button id="er-reset" title="初期配置">⟲</button>
+  </div>
+  <div id="er-viewport">
+    <div id="er-viewport-inner">
+      <svg id="er-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="er2d-cards"></div>
+    </div>
+  </div>
+  <div id="er3d-viewport" style="display:none">
+    <canvas id="er3d-canvas"></canvas>
+  </div>
+</section>
+
+  <!-- テーブル一覧 -->
+  <section class="view" data-view="tables">
+    <input id="table-filter" placeholder="絞り込み…" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div id="table-list"></div>
+  </section>
+
+  <!-- データ閲覧 -->
+  <section class="view" data-view="data">
+    <div id="data-head">
+      <input id="data-filter" placeholder="絞り込み…" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="data-reload" aria-label="再読込">↻</button>
+    </div>
+    <div id="data-meta"></div>
+    <div id="data-body"></div>
+    <div id="data-foot">
+      <button id="pg-first">«</button>
+      <button id="pg-prev">‹</button>
+      <span id="pg-info">—</span>
+      <button id="pg-next">›</button>
+      <button id="pg-last">»</button>
+    </div>
+  </section>
+
+  <!-- 自然言語質問 -->
+  <section class="view" data-view="ask">
+    <div id="ask-input-wrap">
+      <textarea id="ask-input" rows="3" placeholder="例: usersテーブルの件数は？" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+      <button id="ask-input-clear" title="入力をクリア" aria-label="入力をクリア">×</button>
+    </div>
+    <button id="ask-run">質問する</button>
+    <div id="ask-log"></div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<a href="/?force=pc" id="btn-to-pc"
+   style="position:fixed;bottom:20px;right:20px;font-size:14px;color:#ffffff;z-index:2147483647;background:#4a8cff;padding:12px 18px;border-radius:24px;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,.6);font-weight:bold">
+  🖥 PC版へ
+</a>
+
+<script type="module" src="/static/m.js"></script>
+</body>
+</html>

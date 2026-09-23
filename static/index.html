@@ -4,6 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DBVERSE</title>
+
+<!-- ═══ 画面幅でスマホ版へ自動振り分け ═══ -->
+<script>
+(function () {
+  if (location.pathname !== '/' && location.pathname !== '/index.html') return;
+  // ① URLパラメータ ?force=pc があれば強制PC版（最優先・確実）
+  if (new URLSearchParams(location.search).get('force') === 'pc') return;
+  // ② cookie に view=pc があればPC版
+  if (document.cookie.indexOf('view=pc') !== -1) return;
+  // ③ 画面幅で判定
+  if (window.innerWidth <= 820) {
+    location.replace('/m' + location.hash);
+  }
+})();
+</script>
+
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -204,6 +220,13 @@
 }
 </script>
 <script type="module" src="/static/main.js"></script>
+
+<!-- ═══ スマホ版へのリンク ═══ -->
+<a href="/m?force=mobile" id="to-mobile"
+   onclick="document.cookie='view=pc; max-age=0; path=/';"
+   style="position:fixed;bottom:20px;right:20px;font-size:14px;color:#ffffff;z-index:2147483647;background:#e5534b;padding:12px 18px;border-radius:24px;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,.6);font-weight:bold">
+  📱 mobile版へ
+</a>
 
 </body>
 </html>
