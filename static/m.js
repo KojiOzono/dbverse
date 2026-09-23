@@ -51,13 +51,37 @@ $('#btn-back').addEventListener('click', () => {
   else                              showView('menu');
 });
 
-// ─── スキーマ ─────────────────────────
+// ─── スキーマ（構造のみ） ─────────────
 async function loadSchema(force = false) {
   if (state.schema && !force) return state.schema;
   const r = await fetch('/api/schema');
   if (!r.ok) throw new Error('schema fetch failed');
   state.schema = await r.json();
+  // 件数は非同期で取得（fire-and-forget）
+  loadCounts();
   return state.schema;
+}
+
+// ─── 件数（別API・非同期） ────────────
+let countsLoading = false;
+async function loadCounts(force = false) {
+  if (!state.schema) return;
+  if (countsLoading && !force) return;
+  countsLoading = true;
+  try {
+    const r = await fetch('/api/counts');
+    if (!r.ok) return;
+    const { counts } = await r.json();
+    if (!state.schema || !counts) return;
+    state.schema.tables.forEach(t => {
+      t.rows = counts[t.name] ?? null;
+    });
+    document.dispatchEvent(new CustomEvent('counts-ready'));
+  } catch (e) {
+    console.warn('counts fetch failed', e);
+  } finally {
+    countsLoading = false;
+  }
 }
 
 async function initMenu() {
@@ -69,6 +93,13 @@ async function initMenu() {
     toast('スキーマ取得失敗: ' + e.message);
   }
 }
+
+// ─── 件数取得完了で再描画 ────────────
+document.addEventListener('counts-ready', () => {
+  if (state.view === 'tables') {
+    renderTableList($('#table-filter').value);
+  }
+});
 
 // ═══════════════════════════════════════════════════════
 // ER図 初期化（2D / 3D 統合）
@@ -137,7 +168,6 @@ async function setERMode(mode) {
       toast('3D表示失敗: ' + e.message);
       vp2d.style.display = 'block';
       vp3d.style.display = 'none';
-      // 2D がまだなら初期化してからフォールバック
       if (!M_ER2D.isReady()) {
         try { await initER2D(); } catch {}
       }
@@ -146,7 +176,6 @@ async function setERMode(mode) {
   } else {
     vp3d.style.display = 'none';
     vp2d.style.display = 'block';
-    // 2D 未初期化なら初期化
     if (!M_ER2D.isReady()) {
       try { await initER2D(); } catch (e) {
         console.error('2D init failed:', e);
@@ -170,11 +199,9 @@ $$('.menu-item').forEach(btn => {
     } else if (goto === 'er') {
       showView('er');
       try {
-        // 2D を裏で初期化（トグル切替のため）
         if (!M_ER2D.isReady()) {
           initER2D().catch(e => console.warn('2D init failed:', e));
         }
-        // 初回は 3D を表示
         await setERMode('3d');
       } catch (e) {
         console.error('ER init failed:', e);
@@ -222,7 +249,7 @@ async function renderTableList(filter = '') {
     list.innerHTML = items.map(t => `
       <div class="titem" data-table="${escapeAttr(t.name)}">
         <span class="name">${escapeHtml(t.name)}</span>
-        <span class="rows">${t.rows}</span>
+        <span class="rows">${t.rows == null ? '—' : t.rows}</span>
       </div>
     `).join('');
   } catch (e) {

@@ -83,7 +83,7 @@ export function groupKeyForTable(name) {
   return i < 0 ? '(no prefix)' : name.slice(0, i);
 }
 
-/* ─── スキーマ ─── */
+/* ─── スキーマ（構造のみ） ─── */
 export async function loadSchema() {
   const r = await fetch('/api/schema');
   state.schema = await r.json();
@@ -93,6 +93,49 @@ export async function loadSchema() {
   document.getElementById('table-count').textContent =
     String(state.schema.tables.length);
   renderTableList();
+  // 件数は非同期で取得（fire-and-forget）
+  loadCounts();
+}
+
+/* ─── 件数（別API・非同期） ─── */
+let countsLoading = false;
+export async function loadCounts(force = false) {
+  if (!state.schema) return;
+  if (countsLoading && !force) return;
+  countsLoading = true;
+  try {
+    const r = await fetch('/api/counts');
+    if (!r.ok) return;
+    const { counts } = await r.json();
+    if (!state.schema || !counts) return;
+    state.schema.tables.forEach(t => {
+      t.rows = counts[t.name] ?? null;
+    });
+
+    // サイドバー再描画
+    renderTableList();
+    // テーブル一覧の active を復元
+    if (state.currentTable) {
+      document.querySelectorAll('.titem').forEach(x => {
+        x.classList.toggle('act', x.dataset.name === state.currentTable);
+      });
+    }
+
+    // ER再構築（カードの rows 表示更新）
+    if (state.erCards.length > 0) {
+      buildER();
+      if (er2d.mode === '2d') build2D();
+    }
+
+    // ヘッダ更新
+    updateHeader();
+
+    document.dispatchEvent(new CustomEvent('counts-ready'));
+  } catch (e) {
+    console.warn('counts fetch failed', e);
+  } finally {
+    countsLoading = false;
+  }
 }
 
 export function computeShortenPrefixes() {
@@ -118,12 +161,13 @@ export function renderTableList() {
   const el = document.getElementById('tlist-body');
   el.innerHTML = state.schema.tables.map(t => {
     const short = shortenName(t.name);
+    const cnt = (t.rows == null) ? '—' : t.rows;
     return '<div class="titem" data-name="' + escapeAttr(t.name) +
       '" data-drag-type="table" data-drag-value="' + escapeAttr(t.name) + '"' +
       ' draggable="true"' +
       ' title="' + escapeAttr(t.name) + '">' +
       '<span class="n">' + escapeHtml(short) + '</span>' +
-      '<span class="c">' + t.rows + '</span>' +
+      '<span class="c">' + cnt + '</span>' +
       (t.fks.length ? '<span class="fk">↗</span>' : '') +
       '</div>';
   }).join('');
@@ -192,14 +236,15 @@ export function updateHeader() {
     metaEl.innerHTML = '<b>' + sql.lastQResult.rows.length + '</b> 行';
   } else if (state.currentTable) {
     nameEl.textContent = state.currentTable;
-    let total = 0;
+    let total = null;
     if (dv.lastData && dv.lastData.name === state.currentTable) total = dv.lastData.total;
     else {
       const t = state.schema.tables.find(x => x.name === state.currentTable);
       if (t) total = t.rows;
     }
+    const totalStr = (total == null) ? '—' : total;
     const filtered = dv.filter ? ' <span style="color:#5a7c96">(絞り込み中)</span>' : '';
-    metaEl.innerHTML = '<b>' + total + '</b> 行' + filtered;
+    metaEl.innerHTML = '<b>' + totalStr + '</b> 行' + filtered;
   } else {
     nameEl.textContent = '—';
     metaEl.innerHTML = '';
@@ -382,7 +427,7 @@ async function boot() {
   setupThree();
   animate();
 
-  // サーバーから UI 設定を取得
+  // 設定取得
   try {
     const cfg = await fetch('/api/config').then(r => r.json());
     if (Array.isArray(cfg.shorten_prefixes)) {
@@ -396,35 +441,50 @@ async function boot() {
     console.warn('[config] fetch failed, using defaults:', e);
   }
 
+  // スキーマだけ取得して、すぐブート画面を閉じる
   try {
     await loadSchema();
-    await initLayout();
-    buildER();
-
-    // 真上から斜めへ（上揃え）スッと動かす
-    const cTop = fitER();
-    state.camera.position.copy(cTop.pos);
-    state.controls.target.copy(cTop.target);
-
-    setTimeout(() => {
-      const c3d = fitER3D();
-      tweenCamera(c3d.pos, c3d.target, 1400);
-    }, 300);
   } catch (e) {
     console.error('起動失敗:', e);
     toast('起動失敗: ' + e.message, 'err');
+    document.getElementById('boot').classList.add('hide');
+    return;
   }
+
   document.getElementById('boot').classList.add('hide');
   document.getElementById('sqlinput').focus();
 
-  // dataview.js を動的 import して api に関数を登録
-  const m = await import('./dataview.js');
-  api.openTable     = m.openTable;
-  api.closeTable    = m.closeTable;
-  api.loadTableData = m.loadTableData;
-  api.toggleDense   = m.toggleDense;
-  api.toggleZebra   = m.toggleZebra;
-  api.selectAll     = m.selectAll;
-  api.copySelected  = m.copySelected;
+  // ここから先はバックグラウンド（画面はもう見えている）
+  (async () => {
+    try {
+      await initLayout();
+      buildER();
+
+      const cTop = fitER();
+      state.camera.position.copy(cTop.pos);
+      state.controls.target.copy(cTop.target);
+
+      setTimeout(() => {
+        const c3d = fitER3D();
+        tweenCamera(c3d.pos, c3d.target, 1400);
+      }, 300);
+    } catch (e) {
+      console.error('ER初期化失敗:', e);
+    }
+  })();
+
+  // dataview.js の読み込み（これも待たなくてOK）
+  try {
+    const m = await import('./dataview.js');
+    api.openTable     = m.openTable;
+    api.closeTable    = m.closeTable;
+    api.loadTableData = m.loadTableData;
+    api.toggleDense   = m.toggleDense;
+    api.toggleZebra   = m.toggleZebra;
+    api.selectAll     = m.selectAll;
+    api.copySelected  = m.copySelected;
+  } catch (e) {
+    console.error('dataview.js 読み込み失敗:', e);
+  }
 }
 boot();

@@ -186,11 +186,12 @@ export function buildER() {
       const dstT = state.schema.tables.find(x => x.name === fk.to_table);
       if (!dstT) return;
 
-
-      // 仮の直線（animate で毎フレーム更新される）
+      // 仮の曲線（animate で毎フレーム更新される）
       const p0 = new THREE.Vector3(src.x, src.y, src.z);
       const p3 = new THREE.Vector3(dst.x, dst.y, dst.z);
-      const curve = new THREE.LineCurve3(p0, p3);
+      const p1 = new THREE.Vector3().lerpVectors(p0, p3, 0.3);
+      const p2 = new THREE.Vector3().lerpVectors(p0, p3, 0.7);
+      const curve = new THREE.CatmullRomCurve3([p0, p1, p2, p3]);
 
       const tube = new THREE.Mesh(
         new THREE.TubeGeometry(curve, 40, 0.06, 6, false),
@@ -286,7 +287,8 @@ function makeERTexture(t, texH) {
   g.fillStyle = '#eaf6ff';
   g.font = '26px "SF Mono","Courier New",monospace';
   g.textAlign = 'right';
-  g.fillText(t.rows + ' rows · ' + t.columns.length + ' cols', TEX_W - 30, 62);
+  const rowsStr = (t.rows == null) ? '—' : t.rows;
+  g.fillText(rowsStr + ' rows · ' + t.columns.length + ' cols', TEX_W - 30, 62);
   g.textAlign = 'left';
 
   g.strokeStyle = 'rgba(77,232,255,0.3)';
@@ -512,11 +514,24 @@ export function animate() {
         .applyQuaternion(dstCard.plane.quaternion)
         .add(dstCard.group.position);
 
-      b.curve.v1.copy(p0);
-      b.curve.v2.copy(p3);
+      const dx = p3.x - p0.x, dz = p3.z - p0.z;
+      const dist = Math.sqrt(dx*dx + dz*dz) || 1;
+      const perpX = -dz / dist, perpZ = dx / dist;
+      const bend = Math.min(dist * 0.18, 8);
+      const midY = Math.max(p0.y, p3.y) + 1.5;
+
+      const p1 = new THREE.Vector3(
+        p0.x + dx * 0.30 + perpX * bend, midY, p0.z + dz * 0.30 + perpZ * bend);
+      const p2 = new THREE.Vector3(
+        p0.x + dx * 0.70 + perpX * bend, midY, p0.z + dz * 0.70 + perpZ * bend);
+
+      b.curve.points[0].copy(p0);
+      b.curve.points[1].copy(p1);
+      b.curve.points[2].copy(p2);
+      b.curve.points[3].copy(p3);
 
       b.mesh.geometry.dispose();
-      b.mesh.geometry = new THREE.TubeGeometry(b.curve, 1, 0.06, 6, false);
+      b.mesh.geometry = new THREE.TubeGeometry(b.curve, 40, 0.06, 6, false);
 
       b.phase += dt*0.25;
       b.dots.forEach((d, i) => {

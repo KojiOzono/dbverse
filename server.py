@@ -62,7 +62,7 @@ SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORD
 """
 
 LLM_SYSTEM_SQLITE = """あなたはSQLiteのアシスタント。
-質問に答える。SQLで答えられるなら SELECT 文を1つだけ出力する。
+質問に答える。SQLで答えるなら SELECT 文を1つだけ出力する。
 余計な前置きや説明は書かない。SQLのみを出力し、絶対に 'sql:' などのプレフィックスを付けない。
 
 ルール:
@@ -93,13 +93,18 @@ def get_llm_system():
     return LLM_SYSTEM_SQLITE
 
 
-
 HOST = SERVER["host"]
 PORT = SERVER["port"]
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 LAYOUT_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "data", "layout2d.json")
+
+
+def _log(msg):
+    ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+    print(f"[{ts}] {msg}", flush=True)
+
 
 # ═══════════════════════════════════════════════════════════════
 #  SQLite Adapter
@@ -212,6 +217,7 @@ class SQLiteAdapter:
         from sample_data import seed
         seed(self.conn)
 
+
 # ═══════════════════════════════════════════════════════════════
 #  PostgreSQL Adapter
 # ═══════════════════════════════════════════════════════════════
@@ -282,6 +288,84 @@ class PostgresAdapter:
         """, (self.schema,))
         return [r[0] for r in cur.fetchall()]
 
+    # ─── 一括取得（pg_catalog 直叩き・3クエリ固定） ───
+    def bulk_schema(self):
+        cur = self.conn.cursor()
+
+        # 1) テーブル一覧
+        cur.execute("""
+            SELECT c.relname
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = %s AND c.relkind IN ('r','p')
+            ORDER BY c.relname
+        """, (self.schema,))
+        tables = {}
+        for (name,) in cur.fetchall():
+            tables[name] = {"columns": [], "fks": []}
+
+        if not tables:
+            return tables
+
+        # 2) 全カラム + PK 判定
+        cur.execute("""
+            SELECT c.relname AS tbl,
+                   a.attname AS col,
+                   format_type(a.atttypid, a.atttypmod) AS typ,
+                   a.attnotnull AS notnull,
+                   a.attnum AS ord,
+                   COALESCE(pk.is_pk, false) AS is_pk
+            FROM pg_class c
+            JOIN pg_namespace n  ON n.oid = c.relnamespace
+            JOIN pg_attribute a  ON a.attrelid = c.oid
+            LEFT JOIN (
+                SELECT i.indrelid, unnest(i.indkey) AS attnum, true AS is_pk
+                FROM pg_index i WHERE i.indisprimary
+            ) pk ON pk.indrelid = c.oid AND pk.attnum = a.attnum
+            WHERE n.nspname = %s
+              AND c.relkind IN ('r','p')
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+            ORDER BY c.relname, a.attnum
+        """, (self.schema,))
+        for tbl, col, typ, notnull, ord_, is_pk in cur.fetchall():
+            if tbl not in tables:
+                continue
+            tables[tbl]["columns"].append({
+                "name": col,
+                "type": typ,
+                "notnull": bool(notnull),
+                "pk": bool(is_pk),
+            })
+
+        # 3) 全FK
+        cur.execute("""
+            SELECT con.conrelid::regclass::text AS from_tbl,
+                   a.attname  AS from_col,
+                   con.confrelid::regclass::text AS to_tbl,
+                   af.attname AS to_col
+            FROM pg_constraint con
+            JOIN pg_namespace n  ON n.oid = con.connamespace
+            JOIN pg_attribute a  ON a.attrelid = con.conrelid
+                                AND a.attnum = ANY(con.conkey)
+            JOIN pg_attribute af ON af.attrelid = con.confrelid
+                                AND af.attnum = ANY(con.confkey)
+            WHERE con.contype = 'f'
+              AND n.nspname = %s
+        """, (self.schema,))
+        for from_tbl, from_col, to_tbl, to_col in cur.fetchall():
+            ft = from_tbl.split(".")[-1].strip('"')
+            tt = to_tbl.split(".")[-1].strip('"')
+            if ft in tables:
+                tables[ft]["fks"].append({
+                    "from_col": from_col,
+                    "to_table": tt,
+                    "to_col": to_col,
+                })
+
+        return tables
+
+    # ─── 単一テーブル（AI用・既存互換） ───
     def table_schema(self, name):
         cur = self.conn.cursor()
         cur.execute("""
@@ -454,11 +538,9 @@ def extract_sql(text):
     if m:
         return m.group(1).strip()
 
-    # SELECT または WITH を探し、そこから後ろを抽出する
     match = re.search(r"\b(SELECT|WITH)\b", text, re.IGNORECASE)
     if match:
         sql = text[match.start():].strip()
-        # セミコロンより後ろを削除（複文防止）
         sql = sql.split(";")[0].strip()
         return sql
 
@@ -516,6 +598,8 @@ def _get_llm_headers():
     if LLM.get("api_key"):
         headers["Authorization"] = f"Bearer {LLM['api_key']}"
     return headers
+
+
 # ═══════════════════════════════════════════════════════════════
 #  HTTP Handler
 # ═══════════════════════════════════════════════════════════════
@@ -524,6 +608,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, *a):
         pass
+
+    def _log(self, msg):
+        _log(msg)
 
     # -------- JSON
     def _json(self, obj, code=200):
@@ -579,7 +666,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         with open(full, "rb") as f:
             self._bytes(f.read(), ctype)
 
-    # -------- SSE (chunked transfer encoding)
+    # -------- SSE
     def _sse_start(self):
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -615,41 +702,85 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     # -------- GET
     def do_GET(self):
+        t0 = time.perf_counter()
         parsed = urlparse(self.path)
         p = parsed.path
-        if p in ("/", "/index.html"):
-            self._serve_static("index.html")
-        elif p in ("/m", "/m.html"):
-            self._serve_static("m.html")
-        elif p.startswith("/static/"):
-            self._serve_static(p[len("/static/"):])
-        elif p == "/api/schema":
-            self._api_schema()
-        elif p == "/api/config":
-            self._json(UI)
-        elif p == "/api/ask_sse":
-            params = parse_qs(parsed.query)
-            q = (params.get("q") or [""])[0]
-            self._api_ask_sse(q)
-        elif p == "/api/layout2d":
-            self._api_layout2d_get()
-        else:
-            self._json({"error": "not found"}, 404)
+        try:
+            if p in ("/", "/index.html"):
+                self._serve_static("index.html")
+            elif p in ("/m", "/m.html"):
+                self._serve_static("m.html")
+            elif p.startswith("/static/"):
+                self._serve_static(p[len("/static/"):])
+            elif p == "/api/schema":
+                self._api_schema()
+            elif p == "/api/counts":
+                self._api_counts()
+            elif p == "/api/config":
+                self._json(UI)
+            elif p == "/api/ask_sse":
+                params = parse_qs(parsed.query)
+                q = (params.get("q") or [""])[0]
+                self._api_ask_sse(q)
+            elif p == "/api/layout2d":
+                self._api_layout2d_get()
+            else:
+                self._json({"error": "not found"}, 404)
+        finally:
+            ms = (time.perf_counter() - t0) * 1000
+            if not p.startswith("/static/") and p not in ("/", "/m", "/m.html"):
+                self._log(f"GET  {p}  {ms:8.1f}ms")
 
     def _api_schema(self):
+        t0 = time.perf_counter()
         with DB.lock:
             try:
-                tables = []
-                for name in DB.list_tables():
-                    sch = DB.table_schema(name)
-                    cnt = DB.count(name)
-                    tables.append({
-                        "name": name,
-                        "columns": sch["columns"],
-                        "fks": sch["fks"],
-                        "rows": cnt,
-                    })
+                if DB.dialect == "postgres":
+                    # PostgreSQL は pg_catalog 直叩きで一括取得
+                    bulk = DB.bulk_schema()
+                    tables = [
+                        {
+                            "name": name,
+                            "columns": bulk[name]["columns"],
+                            "fks": bulk[name]["fks"],
+                            "rows": None,
+                        }
+                        for name in sorted(bulk.keys())
+                    ]
+                else:
+                    # SQLite は従来通り
+                    tables = []
+                    for name in DB.list_tables():
+                        sch = DB.table_schema(name)
+                        tables.append({
+                            "name": name,
+                            "columns": sch["columns"],
+                            "fks": sch["fks"],
+                            "rows": None,
+                        })
+                ms = (time.perf_counter() - t0) * 1000
+                self._log(
+                    f"       schema built: {ms:.1f}ms  ({len(tables)} tables)")
                 self._json({"name": DB.db_label, "tables": tables})
+            except Exception as e:
+                self._json({"error": str(e)}, 500)
+
+    def _api_counts(self):
+        t0 = time.perf_counter()
+        with DB.lock:
+            try:
+                counts = {}
+                for name in DB.list_tables():
+                    tt = time.perf_counter()
+                    counts[name] = DB.count(name)
+                    tms = (time.perf_counter() - tt) * 1000
+                    if tms > 100:
+                        self._log(
+                            f"       slow count: {name}  {tms:8.1f}ms")
+                total_ms = (time.perf_counter() - t0) * 1000
+                self._log(
+                    f"       counts total: {total_ms:.1f}ms  ({len(counts)} tables)")
+                self._json({"counts": counts})
             except Exception as e:
                 self._json({"error": str(e)}, 500)
 
@@ -672,19 +803,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except Exception as e:
             self._json({"error": str(e)}, 500)
 
-
     # -------- ASK (SSE)
     def _api_ask_sse(self, q):
         self._sse_start()
 
-        # LLM未設定チェック
         if not LLM.get("url"):
             self._sse_event("done", {
                 "error": "LLM未設定: config.py の LLM.url を設定してください"
             })
             self._sse_end()
             return
-
 
         try:
             import httpx
@@ -698,7 +826,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._sse_end()
             return
 
-        # 開通通知
         self._sse_event("open", {"ok": True})
 
         try:
@@ -719,7 +846,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             with httpx.Client(timeout=LLM["timeout"]) as cli:
                 with cli.stream("POST", url, headers=headers, json={
-                    "model": LLM["model"], # 必要に応じてmodelも渡す
+                    "model": LLM["model"],
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": LLM["n_predict"],
                     "temperature": 0.0,
@@ -727,7 +854,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     "stream": True,
                 }) as resp:
                     resp.raise_for_status()
-        
+
                     for line in resp.iter_lines():
                         if not line:
                             continue
@@ -774,6 +901,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     # -------- POST
     def do_POST(self):
+        t0 = time.perf_counter()
         p = urlparse(self.path).path
         d = self._body()
         try:
@@ -797,17 +925,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self._json({"error": "not found"}, 404)
         except Exception as e:
             self._json({"error": str(e)}, 500)
+        finally:
+            ms = (time.perf_counter() - t0) * 1000
+            self._log(f"POST {p}  {ms:8.1f}ms")
+
     def do_DELETE(self):
+        t0 = time.perf_counter()
         p = urlparse(self.path).path
-        if p == "/api/layout2d":
-            try:
+        try:
+            if p == "/api/layout2d":
                 if os.path.exists(LAYOUT_FILE):
                     os.remove(LAYOUT_FILE)
                 self._json({"ok": True})
-            except Exception as e:
-                self._json({"error": str(e)}, 500)
-        else:
-            self._json({"error": "not found"}, 404)
+            else:
+                self._json({"error": "not found"}, 404)
+        except Exception as e:
+            self._json({"error": str(e)}, 500)
+        finally:
+            ms = (time.perf_counter() - t0) * 1000
+            self._log(f"DEL  {p}  {ms:8.1f}ms")
 
     def _api_query(self, d):
         sql = (d.get("sql") or "").strip()
@@ -843,7 +979,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                   "\n\nq: " + q + "\na: ")
         url = LLM["url"].rstrip("/") + LLM.get("path", "/v1/chat/completions")
         headers = _get_llm_headers()
-        
+
         payload = {
             "model": LLM["model"],
             "messages": [{"role": "user", "content": prompt}],
@@ -876,7 +1012,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         result["raw"] = raw
         result["llm_ms"] = llm_ms
         self._json(result)
-        
+
     def _api_table(self, d):
         name = d.get("name")
         limit = max(1, min(int(d.get("limit", 500)), 5000))
@@ -947,17 +1083,17 @@ def main():
     build_adapter()
 
     srv = Server((HOST, PORT), Handler)
-    print("═" * 60)
-    print("  DBVERSE")
-    print("  Type : %s" % CONFIG["type"])
-    print("  DB   : %s" % DB.db_label)
-    print("  LLM  : %s (%s)" % (LLM["url"], LLM["model"]))
-    print("  Open : http://localhost:%d" % PORT)
-    print("═" * 60)
+    print("═" * 60, flush=True)
+    print("  DBVERSE", flush=True)
+    print("  Type : %s" % CONFIG["type"], flush=True)
+    print("  DB   : %s" % DB.db_label, flush=True)
+    print("  LLM  : %s (%s)" % (LLM["url"], LLM["model"]), flush=True)
+    print("  Open : http://localhost:%d" % PORT, flush=True)
+    print("═" * 60, flush=True)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
-        print("\n[shutdown]")
+        print("\n[shutdown]", flush=True)
         srv.shutdown()
 
 
