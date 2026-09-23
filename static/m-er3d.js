@@ -5,11 +5,11 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-const CARD_W    = 7.0;   // 8.4 → 7.0（PC版と同じ）
+const CARD_W    = 7.0;
 const TEX_W     = 768;
-const HEADER_PX = 100;   // 140 → 100
-const ROW_PX    = 44;    // 76  → 44
-const PAD_PX    = 24;    // 32  → 24
+const HEADER_PX = 100;
+const ROW_PX    = 44;
+const PAD_PX    = 24;
 const SCALE_2D_TO_3D = 1 / 30;
 
 // ─── 内部状態 ─────────────────────────────
@@ -22,6 +22,15 @@ let canvasEl = null;
 let schema = null, layout = null;
 let onTableClick = null;
 let hoveredCard = null;
+
+// ─── 宇宙装飾 ───
+let nebulaGroup   = null;
+let pulsarPoints  = null;
+let pulsarColAttr = null;
+let pulsarData    = [];
+let meteors       = [];
+let meteorTimer   = 3;
+let starTexture   = null;
 
 // ─── ユーティリティ ─────────────────────────
 function truncate(s, n) {
@@ -43,6 +52,279 @@ function shortType(t) {
   return t;
 }
 
+// ─── 丸い光テクスチャ ───
+function makeStarTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const g = cv.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0.00, 'rgba(255,255,255,1.0)');
+  grad.addColorStop(0.25, 'rgba(255,255,255,0.7)');
+  grad.addColorStop(0.55, 'rgba(255,255,255,0.22)');
+  grad.addColorStop(0.85, 'rgba(255,255,255,0.04)');
+  grad.addColorStop(1.00, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// ─── ノイズ（fBm）生成 ───
+function makeNoise(seed) {
+  const rnd = (() => {
+    let s = seed * 9301 + 49297;
+    return () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  })();
+  const G = 16;
+  const grid = [];
+  for (let i = 0; i <= G; i++) {
+    grid[i] = [];
+    for (let j = 0; j <= G; j++) grid[i][j] = rnd();
+  }
+  const smooth = t => t * t * (3 - 2 * t);
+  const sample = (x, y, freq) => {
+    const fx = (((x * freq) % G) + G) % G;
+    const fy = (((y * freq) % G) + G) % G;
+    const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    const x1 = (x0 + 1) % G,  y1 = (y0 + 1) % G;
+    const tx = smooth(fx - x0), ty = smooth(fy - y0);
+    const a = grid[x0][y0], b = grid[x1][y0];
+    const c = grid[x0][y1], d = grid[x1][y1];
+    return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
+  };
+  return (x, y) => {
+    let v = 0, amp = 0.5, f = 1.5;
+    for (let o = 0; o < 5; o++) {
+      v += sample(x, y, f) * amp;
+      amp *= 0.5; f *= 2;
+    }
+    return v;
+  };
+}
+
+// ─── 雲状の星雲テクスチャ ───
+// モバイル負荷軽減のため 128px（スプライトで拡大されるので十分滑らか）
+const NEBULA_TEX_SIZE = 128;
+function makeNebulaTexture(seed = 1) {
+  const S = NEBULA_TEX_SIZE;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const img = g.createImageData(S, S);
+  const fbm  = makeNoise(seed);
+  const warp = makeNoise(seed + 17);
+
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const u = x / S, v = y / S;
+      // ドメインワープでうねりを出す
+      const wx = u + (warp(u, v) - 0.5) * 0.35;
+      const wy = v + (warp(v, u) - 0.5) * 0.35;
+      let n = fbm(wx, wy);
+      // 中心からの距離で縁を自然に消す
+      const dx = u - 0.5, dy = v - 0.5;
+      const r = Math.sqrt(dx * dx + dy * dy) * 2;
+      const edge = Math.max(0, 1 - r);
+      const edge2 = edge * edge * (3 - 2 * edge);
+      // 濃淡を強調（しきい値でちぎれ感）
+      n = Math.max(0, (n - 0.35) * 2.2);
+      const a = Math.min(1, n * edge2);
+      const i = (y * S + x) * 4;
+      img.data[i]     = 255;
+      img.data[i + 1] = 255;
+      img.data[i + 2] = 255;
+      img.data[i + 3] = a * 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function setupSpaceFX() {
+  starTexture = makeStarTexture();
+
+  // ─── 星雲（複数レイヤーの雲を重ねる） ───
+  const nebCenters = [
+    { x: -120, y:  50, z: -140, size: 260, cols: [0xa06bff, 0x4de8ff] },
+    { x:  130, y:  40, z:  120, size: 240, cols: [0xff6b8b, 0xa06bff] },
+    { x:   60, y: -20, z: -180, size: 220, cols: [0x4de8ff, 0x7dff9b] },
+    { x: -150, y:  80, z:  110, size: 250, cols: [0x66ddff, 0xa06bff] },
+  ];
+  const LAYERS = 4;
+  nebulaGroup = new THREE.Group();
+  nebCenters.forEach((d, ci) => {
+    for (let k = 0; k < LAYERS; k++) {
+      const tex = makeNebulaTexture(ci * 10 + k + 1);
+      const mat = new THREE.SpriteMaterial({
+        map: tex,
+        color: d.cols[k % d.cols.length],
+        transparent: true,
+        opacity: 0.16 + Math.random() * 0.1,
+        depthWrite: false,
+        fog: false,
+        blending: THREE.AdditiveBlending,
+        rotation: Math.random() * Math.PI * 2,
+      });
+      const sp = new THREE.Sprite(mat);
+      sp.position.set(
+        d.x + (Math.random() - 0.5) * 70,
+        d.y + (Math.random() - 0.5) * 40,
+        d.z + (Math.random() - 0.5) * 70
+      );
+      const s = d.size * (0.6 + Math.random() * 0.6);
+      sp.scale.set(s, s * (0.6 + Math.random() * 0.4), 1);
+      nebulaGroup.add(sp);
+    }
+  });
+  scene.add(nebulaGroup);
+
+  // ─── パルサー ───
+  const PN = 36;
+  const ppos = new Float32Array(PN * 3);
+  const pcol = new Float32Array(PN * 3);
+  pulsarData = [];
+  for (let i = 0; i < PN; i++) {
+    const r = 160 + Math.random() * 260;
+    const a = Math.random() * Math.PI * 2;
+    const ph = Math.acos(2 * Math.random() - 1);
+    ppos[i * 3]     = Math.sin(ph) * Math.cos(a) * r;
+    ppos[i * 3 + 1] = Math.cos(ph) * r * 0.6 + 30;
+    ppos[i * 3 + 2] = Math.sin(ph) * Math.sin(a) * r;
+    const base = new THREE.Color().setHSL(
+      0.5 + Math.random() * 0.12, 0.85, 0.7);
+    pulsarData.push({
+      freq:  0.35 + Math.random() * 0.85,
+      phase: Math.random() * Math.PI * 2,
+      base,
+    });
+  }
+  const pg = new THREE.BufferGeometry();
+  pg.setAttribute('position', new THREE.BufferAttribute(ppos, 3));
+  pulsarColAttr = new THREE.BufferAttribute(pcol, 3);
+  pulsarColAttr.setUsage(THREE.DynamicDrawUsage);
+  pg.setAttribute('color', pulsarColAttr);
+  pulsarPoints = new THREE.Points(pg, new THREE.PointsMaterial({
+    size: 2.4,
+    map: starTexture,
+    vertexColors: true,
+    transparent: true,
+    opacity: 1.0,
+    depthWrite: false,
+    fog: false,
+    blending: THREE.AdditiveBlending,
+    sizeAttenuation: true,
+  }));
+  scene.add(pulsarPoints);
+
+  // ─── 流れ星 ───
+  const METEOR_N = 3;
+  const mg = new THREE.CylinderGeometry(0.05, 0.05, 1, 6, 1, true);
+  mg.translate(0, 0.5, 0);
+  meteors = [];
+  for (let i = 0; i < METEOR_N; i++) {
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xddeeff, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+      fog: false,
+    });
+    const mesh = new THREE.Mesh(mg, mat);
+    mesh.visible = false;
+    scene.add(mesh);
+    meteors.push({
+      mesh, mat,
+      active: false,
+      life: 0, maxLife: 0,
+      speed: 0, length: 0,
+      pos: new THREE.Vector3(),
+      dir: new THREE.Vector3(0, 0, 1),
+    });
+  }
+  meteorTimer = 3;
+}
+
+function spawnMeteor(m) {
+  const a = Math.random() * Math.PI * 2;
+  const R = 240 + Math.random() * 100;
+  const h = 60 + Math.random() * 120;
+  m.pos.set(Math.cos(a) * R, h, Math.sin(a) * R);
+
+  const opp = a + Math.PI + (Math.random() - 0.5) * 0.6;
+  const endH = h - 80 - Math.random() * 60;
+  const ex = Math.cos(opp) * R;
+  const ez = Math.sin(opp) * R;
+  m.dir.set(ex - m.pos.x, endH - m.pos.y, ez - m.pos.z).normalize();
+
+  m.speed   = 120 + Math.random() * 100;
+  m.length  = 22 + Math.random() * 30;
+  m.maxLife = 2.0 + Math.random() * 1.4;
+  m.life    = 0;
+  m.active  = true;
+
+  const tint = Math.random();
+  if (tint < 0.6)      m.mat.color.setHex(0xddeeff);
+  else if (tint < 0.8) m.mat.color.setHex(0xddaaff);
+  else                 m.mat.color.setHex(0xaaffdd);
+
+  m.mesh.visible = true;
+  m.mesh.position.copy(m.pos);
+  m.mesh.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0), m.dir);
+  m.mesh.scale.set(1, m.length, 1);
+  m.mat.opacity = 0;
+}
+
+function updateSpaceFX(dt, t) {
+  // 星雲をゆっくり回転
+  if (nebulaGroup) {
+    nebulaGroup.children.forEach((sp, i) => {
+      sp.material.rotation += dt * 0.004 * (i % 2 ? 1 : -1);
+    });
+  }
+
+  if (pulsarColAttr) {
+    const arr = pulsarColAttr.array;
+    for (let i = 0; i < pulsarData.length; i++) {
+      const p = pulsarData[i];
+      const s = 0.5 + 0.5 * Math.sin(t * p.freq * Math.PI * 2 + p.phase);
+      const v = s * s * s;
+      const k = 0.25 + v * 0.75;
+      const c = p.base;
+      arr[i * 3]     = c.r * k;
+      arr[i * 3 + 1] = c.g * k;
+      arr[i * 3 + 2] = c.b * k;
+    }
+    pulsarColAttr.needsUpdate = true;
+  }
+
+  meteorTimer -= dt;
+  if (meteorTimer <= 0) {
+    const slot = meteors.find(x => !x.active);
+    if (slot) spawnMeteor(slot);
+    meteorTimer = 4 + Math.random() * 10;
+  }
+  meteors.forEach(m => {
+    if (!m.active) return;
+    m.life += dt;
+    if (m.life >= m.maxLife) {
+      m.active = false;
+      m.mesh.visible = false;
+      m.mat.opacity = 0;
+      return;
+    }
+    m.pos.addScaledVector(m.dir, m.speed * dt);
+    m.mesh.position.copy(m.pos);
+    const p = m.life / m.maxLife;
+    m.mat.opacity = Math.sin(p * Math.PI) * 0.9;
+  });
+}
+
 // ─── 公開 API ─────────────────────────────
 export function isReady() { return !!renderer; }
 
@@ -53,7 +335,6 @@ export async function init(canvas, schemaData, layoutData, clickCb) {
   onTableClick = clickCb;
 
   if (renderer) {
-    // 既に初期化済みならスキーマだけ更新
     rebuild();
     resize();
     return;
@@ -92,7 +373,6 @@ export async function init(canvas, schemaData, layoutData, clickCb) {
     TWO: THREE.TOUCH.DOLLY_PAN,
   };
 
-  // ライト
   scene.add(new THREE.AmbientLight(0x2a4060, 0.9));
   scene.add(new THREE.HemisphereLight(0x2e6aff, 0x05060f, 0.5));
   const key = new THREE.DirectionalLight(0x88c8ff, 0.7);
@@ -105,7 +385,6 @@ export async function init(canvas, schemaData, layoutData, clickCb) {
   rim2.position.set(40, 10, 30);
   scene.add(rim2);
 
-  // 床ディスク
   const disc = new THREE.Mesh(
     new THREE.CircleGeometry(240, 64),
     new THREE.MeshBasicMaterial({
@@ -116,7 +395,8 @@ export async function init(canvas, schemaData, layoutData, clickCb) {
   disc.position.y = -0.02;
   scene.add(disc);
 
-  // 星（PC版は1500、モバイルは800に削減）
+  starTexture = makeStarTexture();
+
   const N = 800;
   const sg = new THREE.BufferGeometry();
   const pp = new Float32Array(N * 3);
@@ -135,9 +415,17 @@ export async function init(canvas, schemaData, layoutData, clickCb) {
   sg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
   sg.setAttribute('color',    new THREE.BufferAttribute(cc, 3));
   scene.add(new THREE.Points(sg, new THREE.PointsMaterial({
-    size: 0.7, vertexColors: true, transparent: true, opacity: 0.9,
-    depthWrite: false, blending: THREE.AdditiveBlending,
+    size: 1.4,
+    map: starTexture,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    sizeAttenuation: true,
   })));
+
+  setupSpaceFX();
 
   erGroup = new THREE.Group();
   scene.add(erGroup);
@@ -146,26 +434,20 @@ export async function init(canvas, schemaData, layoutData, clickCb) {
   clock = new THREE.Clock();
   pointer = new THREE.Vector2();
 
-  // Bloom
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   composer.addPass(new UnrealBloomPass(
     new THREE.Vector2(w, h), 0.5, 0.5, 0.85
   ));
 
-  // インタラクション
   const dom = renderer.domElement;
   dom.addEventListener('pointermove', onPointerMove);
   dom.addEventListener('pointerdown', onPointerDown);
   dom.addEventListener('click', onClick);
 
-  // 初期ビルド
   rebuild();
-
-  // アニメーション開始
   animate();
 
-  // フィット
   setTimeout(() => {
     resize();
     const c = fitPosition();
@@ -226,12 +508,10 @@ export function doFit(ms = 500) {
 export function dispose() {
   if (animateId) cancelAnimationFrame(animateId);
   animateId = null;
-  // シーン破棄
   if (erGroup) {
     while (erGroup.children.length) disposeObj(erGroup.children.pop());
   }
   cards = []; fkLines = [];
-  // renderer等は残す（再度initされたい時はリロード）
 }
 
 // ─── 内部：ビルド ─────────────────────────
@@ -295,7 +575,6 @@ function rebuild() {
           blending: THREE.AdditiveBlending, depthWrite: false,
         })
       );
-      // 常時表示：visible=false は付けない
       erGroup.add(tube);
 
       const dots = [];
@@ -305,7 +584,6 @@ function rebuild() {
           color: 0xc9a0ff, transparent: true, opacity: 0.95,
           blending: THREE.AdditiveBlending, depthWrite: false,
         }));
-        // 常時表示：visible=false は付けない
         erGroup.add(d);
         dots.push(d);
       }
@@ -405,23 +683,21 @@ function makeTexture(t, texH) {
   g.lineWidth = 3;
   g.strokeRect(1.5, 1.5, TEX_W - 3, texH - 3);
 
-  // ヘッダ左のアクセントバー
   g.fillStyle = '#4de8ff';
   g.fillRect(30, 30, 10, 76);
 
-  // テーブル名
   g.fillStyle = '#eaf6ff';
   g.font = '56px "SF Mono","Courier New",monospace';
   g.textBaseline = 'middle';
   g.fillText(truncate(shortenName(t.name), 18), 60, 62);
 
-  // メタ情報 ← 右寄せ・同じ行・白
   g.fillStyle = '#eaf6ff';
   g.font = '26px "SF Mono","Courier New",monospace';
   g.textAlign = 'right';
-  g.fillText(t.rows + ' rows · ' + t.columns.length + ' cols', TEX_W - 30, 62);
+  const rowsStr = (t.rows == null) ? '—' : t.rows;
+  g.fillText(rowsStr + ' rows · ' + t.columns.length + ' cols', TEX_W - 30, 62);
   g.textAlign = 'left';
-  // ヘッダ下線
+
   g.strokeStyle = 'rgba(77,232,255,0.3)';
   g.lineWidth = 2;
   g.beginPath();
@@ -447,24 +723,20 @@ function makeTexture(t, texH) {
       g.fillRect(0, y - ROW_PX / 2 + 4, TEX_W, ROW_PX - 8);
     }
 
-    // アイコン（28 → 40）
     g.fillStyle = iconColor;
     g.font = '40px "SF Mono","Courier New",monospace';
     g.fillText(icon, 34, y);
 
-    // カラム名（22 → 44）
     g.fillStyle = isPK ? '#ffd166' : (isFK ? '#c9a0ff' : '#eaf6ff');
-    g.font = (isPK ? '' : '') + '44px "SF Mono","Courier New",monospace';
+    g.font = '44px "SF Mono","Courier New",monospace';
     g.fillText(truncate(c.name, 20), 92, y);
 
-    // NOT NULL アスタリスク（20 → 30）
     if (c.notnull && !isPK) {
       g.fillStyle = '#ff8ba0';
       g.font = '30px "SF Mono","Courier New",monospace';
       g.fillText('*', TEX_W - 250, y - 8);
     }
 
-    // 型名（22 → 30）
     g.fillStyle = '#95b8cc';
     g.font = '30px "SF Mono","Courier New",monospace';
     g.textAlign = 'right';
@@ -520,7 +792,6 @@ function onPointerMove(e) {
     hoveredCard = n;
     cards.forEach(c => { c.hoverTarget = c.name === n ? 1 : 0; });
 
-    // 関連カードの rel を更新
     const related = new Set();
     if (n && schema) {
       schema.tables.forEach(t => {
@@ -532,7 +803,6 @@ function onPointerMove(e) {
     }
     cards.forEach(c => { c.relTarget = related.has(c.name) ? 1 : 0; });
 
-    // FK線の表示制御：非ホバー時は全表示、ホバー時は関連のみ
     fkLines.forEach(b => {
       const show = !n || (b.from === n || b.to === n);
       b.mesh.visible = show;
@@ -573,6 +843,8 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 
+  updateSpaceFX(dt, t);
+
   cards.forEach(c => {
     c.plane.quaternion.copy(camera.quaternion);
     c.hover = THREE.MathUtils.lerp(c.hover, c.hoverTarget || 0, dt * 8);
@@ -591,7 +863,6 @@ function animate() {
   });
 
   fkLines.forEach(b => {
-    // 常時更新（曲線スタイルはそのまま）
     const srcCard = cards.find(c => c.name === b.from);
     const dstCard = cards.find(c => c.name === b.to);
     if (!srcCard || !dstCard) return;

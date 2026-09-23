@@ -555,9 +555,9 @@ body { display: flex; flex-direction: column; }
   position: relative;
   width: 100%;
   height: calc(100dvh - 190px);
-  background: #0a0d11;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: #03050d;      /* シーン背景と合わせる */
+  border: 0;                /* 枠を消す */
+  border-radius: 0;         /* 角丸も消す */
   overflow: hidden;
   touch-action: none;
 }
