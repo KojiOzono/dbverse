@@ -10,19 +10,19 @@
      7. ポップアップ / トースト / 起動画面
 
    フォントサイズ統一スケール:
-     8px  → バッジ
-     9px  → 見出しラベル、メタ情報、ヒント
-     10px → 小ボタン、選択バー、フッタ
-     11px → 標準UI（リスト、ボタン、タブ、メニュー）
-     12px → データ表示、結果テーブル
-     13px → ステータス強調
+     9px  → バッジ
+     10px → 見出しラベル、メタ情報、ヒント
+     11px → 小ボタン、選択バー、フッタ
+     12px → 標準UI（リスト、ボタン、タブ、メニュー）
+     13px → データ表示、結果テーブル
+     14px → ステータス強調
      14px → 入力欄、プロンプト
    ═══════════════════════════════════════════════════════════ */
 
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#03050d;
   font-family:"SF Mono","Courier New",monospace;color:#cfe6f5;
-  font-size:11px;
+  font-size:12px;
   -webkit-font-smoothing:antialiased}
 canvas{display:block;position:fixed;inset:0}
 
@@ -33,7 +33,7 @@ canvas{display:block;position:fixed;inset:0}
 /* ═══════════════════════════════════════════════════════════
    1. サイドバー（3セクション）
    ═══════════════════════════════════════════════════════════ */
-#sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;z-index:25;
+#sidebar{position:fixed;left:0;top:0;bottom:0;width:250px;z-index:25;
   background:#040a15f5;backdrop-filter:blur(16px);
   border-right:1px solid #0cf4;display:flex;flex-direction:column;
   padding:14px 0 0 0}
@@ -52,7 +52,7 @@ canvas{display:block;position:fixed;inset:0}
   border-bottom:1px solid #0cf3}
 #view-toggle button{flex:1;background:transparent;
   border:1px solid #0cf4;color:#95b8cc;
-  font-family:inherit;font-size:10px;letter-spacing:2px;
+  font-family:inherit;font-size:11px;letter-spacing:2px;
   padding:5px 0;cursor:pointer;transition:.15s}
 #view-toggle button:first-child{border-radius:4px 0 0 4px;border-right:0}
 #view-toggle button:last-child{border-radius:0 4px 4px 0}
@@ -65,7 +65,7 @@ canvas{display:block;position:fixed;inset:0}
 .sb-tables{flex:6;border-bottom:1px solid #0cf3}
 .sb-cols{flex:4}
 
-.sb-sec .hdr{font-size:9px;letter-spacing:3px;color:#4de8ff;
+.sb-sec .hdr{font-size:10px;letter-spacing:3px;color:#4de8ff;
   padding:10px 16px 6px;position:relative;flex-shrink:0;
   text-transform:uppercase}
 .sb-sec .hdr .cnt{color:#7a9cb0;letter-spacing:1px;margin-left:6px}
@@ -74,7 +74,7 @@ canvas{display:block;position:fixed;inset:0}
   position:absolute;right:12px;top:50%;transform:translateY(-50%);
   background:transparent;border:1px solid #0cf4;color:#4de8ff;
   border-radius:4px;width:24px;height:18px;
-  font-size:10px;cursor:pointer;padding:0;font-family:inherit;
+  font-size:11px;cursor:pointer;padding:0;font-family:inherit;
   transition:.15s;line-height:1}
 .sb-sec .hdr #btn-shorten:hover{background:#0cf2;border-color:#4de8ff}
 .sb-sec .hdr #btn-shorten.active{background:#0cf3;color:#fff;
@@ -82,40 +82,40 @@ canvas{display:block;position:fixed;inset:0}
 
 /* ─── テーブル一覧 ─── */
 #tlist-body{flex:1;overflow:auto;padding:0 8px 6px;min-height:0}
-.titem{padding:6px 12px;font-size:11px;color:#a8cce0;
+.titem{padding:7px 12px;font-size:12px;color:#a8cce0;
   border-radius:5px;cursor:pointer;display:flex;align-items:center;
   margin-bottom:2px;transition:.12s;border:1px solid transparent}
 .titem:hover{background:#0cf1;color:#fff;border-color:#0cf3}
 .titem.act{background:#0cf2;color:#fff;border-color:#4de8ff;
   box-shadow:0 0 14px #0cf5}
 .titem .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.titem .c{font-size:9px;color:#7a9cb0;margin-left:6px;
+.titem .c{font-size:10px;color:#7a9cb0;margin-left:6px;
   padding:1px 6px;background:#0cf2;border-radius:10px;
   font-variant-numeric:tabular-nums}
 .titem.act .c{color:#001018;background:#4de8ff}
-.titem .fk{font-size:8px;color:#a06bff;margin-left:4px}
+.titem .fk{font-size:9px;color:#a06bff;margin-left:4px}
 
 /* ─── テーブル項目（カラム一覧） ─── */
 #clist-body{flex:1;overflow:auto;padding:0 8px 6px;min-height:0}
-#clist-body .empty{padding:14px 12px;font-size:10px;color:#7a9cb0;
+#clist-body .empty{padding:14px 12px;font-size:11px;color:#7a9cb0;
   font-style:italic;letter-spacing:.5px}
 
-.citem{padding:5px 10px;font-size:11px;color:#cfe6f5;
+.citem{padding:6px 10px;font-size:12px;color:#cfe6f5;
   border-radius:4px;display:flex;align-items:center;gap:6px;
   white-space:nowrap;transition:.1s;line-height:1.5}
 .citem:hover{background:#0cf1}
 .citem .bdg{display:flex;gap:2px;flex-shrink:0;min-width:26px}
-.citem .bdg .b{font-size:8px;padding:0 3px;border-radius:2px;
+.citem .bdg .b{font-size:9px;padding:0 3px;border-radius:2px;
   font-weight:700;letter-spacing:.3px;line-height:1.5}
 .citem .bdg .b.pk{background:#ffd166;color:#001018}
 .citem .bdg .b.fk{background:#a06bff;color:#fff}
 .citem .nm{flex:1;overflow:hidden;text-overflow:ellipsis}
 .citem.is-pk .nm{color:#ffd166;font-weight:600}
 .citem.is-fk .nm{color:#c9a0ff}
-.citem .ty{font-size:9px;color:#7a9cb0;text-transform:uppercase;
+.citem .ty{font-size:10px;color:#7a9cb0;text-transform:uppercase;
   letter-spacing:.3px;flex-shrink:0}
 
-#sidebar-db{padding:7px 16px;font-size:9px;color:#7a9cb0;
+#sidebar-db{padding:7px 16px;font-size:10px;color:#7a9cb0;
   letter-spacing:1px;border-top:1px solid #0cf2;line-height:1.7;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 #sidebar-db b{color:#4de8ff;font-weight:600}
@@ -123,7 +123,7 @@ canvas{display:block;position:fixed;inset:0}
 /* ═══════════════════════════════════════════════════════════
    2. 2D ER図
    ═══════════════════════════════════════════════════════════ */
-#er2d{position:fixed;left:230px;right:0;
+#er2d{position:fixed;left:250px;right:0;
   top:var(--top-offset);bottom:0;z-index:21;
   display:none;background:#03050d;overflow:hidden;cursor:grab}
 #er2d.show{display:block}
@@ -144,7 +144,7 @@ canvas{display:block;position:fixed;inset:0}
   background:#0a1520;
   border:1px solid #0cf5;border-radius:6px;
   box-shadow:0 0 14px #0cf3,0 4px 20px #000a;
-  font-size:11px;color:#cfe6f5;
+  font-size:12px;color:#cfe6f5;
   overflow:hidden;
   transition:box-shadow .15s,border-color .15s;
   cursor:pointer;user-select:none}
@@ -158,19 +158,19 @@ canvas{display:block;position:fixed;inset:0}
   border-top:3px solid transparent;
   display:flex;align-items:baseline;gap:6px;
   background:rgba(77,232,255,0.08)}
-.er2d-name{font-size:11px;font-weight:700;
+.er2d-name{font-size:12px;font-weight:700;
   color:#eaf6ff;flex:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.er2d-meta{font-size:9px;color:#7a9cb0;white-space:nowrap}
+.er2d-meta{font-size:10px;color:#7a9cb0;white-space:nowrap}
 
 .er2d-cols{padding:3px 0}
 .er2d-col{padding:2px 8px;
   display:flex;align-items:center;gap:5px;
-  white-space:nowrap;font-size:11px;line-height:1.6}
+  white-space:nowrap;font-size:12px;line-height:1.6}
 
 .er2d-col .badges{display:flex;gap:3px;flex-shrink:0}
 .er2d-col .badge{
-  font-size:8px;padding:0 4px;border-radius:3px;
+  font-size:9px;padding:0 4px;border-radius:3px;
   font-weight:700;letter-spacing:.5px;line-height:1.6}
 .er2d-col .badge.pk{background:#ffd166;color:#001018}
 .er2d-col .badge.fk{background:#a06bff;color:#fff}
@@ -179,23 +179,23 @@ canvas{display:block;position:fixed;inset:0}
   color:#cfe6f5;display:flex;align-items:baseline;gap:4px}
 .er2d-col.is-pk .nm{color:#ffd166;font-weight:600}
 .er2d-col.is-fk .nm{color:#c9a0ff}
-.er2d-col .ref{font-size:9px;color:#7a9cb0;
+.er2d-col .ref{font-size:10px;color:#7a9cb0;
   font-weight:400;font-style:italic}
 
-.er2d-col .ty{font-size:9px;color:#7a9cb0;letter-spacing:.3px;
+.er2d-col .ty{font-size:10px;color:#7a9cb0;letter-spacing:.3px;
   text-transform:uppercase}
 
-.er2d-more{padding:1px 8px;font-size:9px;
+.er2d-more{padding:1px 8px;font-size:10px;
   color:#7a9cb0;font-style:italic}
 
 #er2d-hint{position:absolute;right:20px;bottom:14px;
-  font-size:10px;color:#5a7c96;letter-spacing:1px;
+  font-size:11px;color:#5a7c96;letter-spacing:1px;
   pointer-events:none}
 
 /* ═══════════════════════════════════════════════════════════
    3. データビュー
    ═══════════════════════════════════════════════════════════ */
-#dataview{position:fixed;left:230px;right:0;
+#dataview{position:fixed;left:250px;right:0;
   top:var(--top-offset);bottom:0;z-index:22;
   display:none;flex-direction:column;
   background:#03050dee;backdrop-filter:blur(20px);
@@ -207,20 +207,20 @@ canvas{display:block;position:fixed;inset:0}
 #dv-head{display:flex;align-items:center;gap:6px;
   padding:6px 14px;border-bottom:1px solid #0cf3;flex-shrink:0;
   background:#040a15f0;min-height:34px}
-#dv-name{font-size:12px;letter-spacing:1px;color:#4de8ff;
+#dv-name{font-size:13px;letter-spacing:1px;color:#4de8ff;
   font-weight:700;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;max-width:280px}
-#dv-meta{font-size:10px;color:#7a9cb0;letter-spacing:1px;white-space:nowrap}
+#dv-meta{font-size:11px;color:#7a9cb0;letter-spacing:1px;white-space:nowrap}
 #dv-meta b{color:#ffd166;font-weight:500}
 #dv-head .spacer{flex:1}
 #dv-filter{background:#020610;color:#9fe8ff;border:1px solid #0cf4;
-  border-radius:4px;padding:4px 9px;font-family:inherit;font-size:11px;
+  border-radius:4px;padding:4px 9px;font-family:inherit;font-size:12px;
   outline:none;width:160px;transition:.15s}
 #dv-filter:focus{border-color:#4de8ff;box-shadow:0 0 10px #0cf6;width:220px}
 
 /* 汎用ボタン */
 .dbtn{background:#0cf1;border:1px solid #0cf5;color:#9fe8ff;
-  padding:5px 10px;border-radius:4px;font-family:inherit;font-size:11px;
+  padding:5px 10px;border-radius:4px;font-family:inherit;font-size:12px;
   letter-spacing:1px;cursor:pointer;transition:.15s;
   display:flex;align-items:center;gap:5px;white-space:nowrap}
 .dbtn:hover{background:#0cf3;color:#fff;box-shadow:0 0 10px #0cf5}
@@ -230,8 +230,8 @@ canvas{display:block;position:fixed;inset:0}
 .dbtn.active{background:#0cf4;color:#fff;border-color:#4de8ff}
 .dbtn.danger{border-color:#f36;color:#ff6b8b}
 .dbtn.danger:hover{background:#f002;color:#fff}
-.dbtn .ic{font-size:13px}
-.dbtn .lbl{font-size:10px}
+.dbtn .ic{font-size:14px}
+.dbtn .lbl{font-size:11px}
 
 /* アイコンのみボタン */
 .dbtn.icon{padding:5px 8px;font-size:14px;line-height:1;
@@ -247,10 +247,10 @@ canvas{display:block;position:fixed;inset:0}
   min-width:200px;max-height:420px;overflow:auto;
   display:none;z-index:100;padding:6px}
 .dd-panel.open{display:block}
-.dd-panel .ddh{padding:6px 10px;font-size:9px;
+.dd-panel .ddh{padding:6px 10px;font-size:10px;
   letter-spacing:2px;color:#4de8ff;border-bottom:1px solid #0cf2;
   margin-bottom:4px}
-.dd-item{padding:6px 10px;font-size:11px;color:#cfe6f5;
+.dd-item{padding:6px 10px;font-size:12px;color:#cfe6f5;
   cursor:pointer;border-radius:4px;display:flex;align-items:center;
   gap:8px;user-select:none}
 .dd-item:hover{background:#0cf2;color:#fff}
@@ -258,7 +258,7 @@ canvas{display:block;position:fixed;inset:0}
   border-radius:3px;display:flex;align-items:center;
   justify-content:center;font-size:10px;color:#001018;flex-shrink:0}
 .dd-item.on .chk{background:#4de8ff;border-color:#4de8ff}
-.dd-item .tp{font-size:9px;color:#7a9cb0;margin-left:auto}
+.dd-item .tp{font-size:10px;color:#7a9cb0;margin-left:auto}
 
 /* ─── 表示タブ ─── */
 #dv-tabs{display:flex;align-items:center;
@@ -266,7 +266,7 @@ canvas{display:block;position:fixed;inset:0}
   border-bottom:1px solid #0cf3;
   background:#040a15f0;padding:0 10px;gap:0}
 #dv-tabs .spacer{flex:1}
-.vtab{padding:0 14px;height:30px;line-height:30px;font-size:11px;
+.vtab{padding:0 14px;height:30px;line-height:30px;font-size:12px;
   letter-spacing:1px;color:#7a9cb0;cursor:pointer;
   border-bottom:2px solid transparent;
   transition:.15s;user-select:none;display:flex;
@@ -275,20 +275,20 @@ canvas{display:block;position:fixed;inset:0}
 .vtab.active{color:#4de8ff;border-bottom-color:#4de8ff;
   text-shadow:0 0 10px #0cf}
 .vtab .cnt{margin-left:2px;background:#0cf3;padding:1px 7px;
-  border-radius:10px;font-size:9px;color:#4de8ff;line-height:1.4}
+  border-radius:10px;font-size:10px;color:#4de8ff;line-height:1.4}
 .vtab.active .cnt{color:#001018;background:#4de8ff}
 
 /* 選択中バー */
 #dv-selinfo{display:none;align-items:center;gap:6px;
-  font-size:10px;color:#4de8ff;letter-spacing:1px;padding-right:2px}
+  font-size:11px;color:#4de8ff;letter-spacing:1px;padding-right:2px}
 #dv-selinfo.show{display:flex}
-#dv-selinfo b{color:#ffd166;font-weight:600;font-size:12px}
-#dv-selinfo .dbtn{padding:2px 8px;font-size:10px}
+#dv-selinfo b{color:#ffd166;font-weight:600;font-size:13px}
+#dv-selinfo .dbtn{padding:2px 8px;font-size:11px}
 
 /* ローディング */
 #dv-loading{position:absolute;inset:0;display:none;
   align-items:center;justify-content:center;
-  background:#03050dcc;z-index:10;font-size:11px;
+  background:#03050dcc;z-index:10;font-size:12px;
   color:#4de8ff;letter-spacing:3px}
 #dv-loading.show{display:flex}
 #dv-loading .spin{width:20px;height:20px;
@@ -307,7 +307,7 @@ canvas{display:block;position:fixed;inset:0}
 
 /* ─── テーブル ─── */
 #dv-body table, #dv-result-body table{width:max-content;
-  border-collapse:collapse;font-size:12px;
+  border-collapse:collapse;font-size:13px;
   table-layout:fixed}
 #dv-body th, #dv-body td,
 #dv-result-body th, #dv-result-body td{
@@ -331,7 +331,7 @@ canvas{display:block;position:fixed;inset:0}
 #dv-body thead th[data-col]{
   position:sticky;top:0;
   background:#06213a;color:#ffd166;
-  z-index:2;font-weight:600;font-size:11px;
+  z-index:2;font-weight:600;font-size:12px;
   padding:5px 8px;
   cursor:pointer;user-select:none;
   box-shadow:inset 0 -2px 0 #0cf4,0 2px 8px #0008;
@@ -340,16 +340,16 @@ canvas{display:block;position:fixed;inset:0}
 #dv-body thead th[data-col]:hover{background:#0a2f52;color:#fff}
 #dv-body thead th .col-name{
   display:block;
-  color:#ffd166;font-weight:600;font-size:11px;
+  color:#ffd166;font-weight:600;font-size:12px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #dv-body thead th .col-meta{
   display:block;margin-top:2px;
-  font-size:9px;color:#7a9cb0;font-weight:400;
+  font-size:10px;color:#7a9cb0;font-weight:400;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #dv-body thead th .col-meta .b{
   display:inline-block;
   padding:0 4px;margin-right:4px;
-  border-radius:2px;font-size:8px;font-weight:700;
+  border-radius:2px;font-size:9px;font-weight:700;
   letter-spacing:.5px;vertical-align:middle}
 #dv-body thead th .col-meta .b.pk{background:#ffd166;color:#001018}
 #dv-body thead th .col-meta .b.fk{background:#a06bff;color:#fff}
@@ -357,7 +357,7 @@ canvas{display:block;position:fixed;inset:0}
   color:#95b8cc;text-transform:lowercase}
 #dv-body thead th:hover .col-name{color:#fff}
 #dv-body thead th:hover .col-meta .ty{color:#a8cce0}
-#dv-body thead th .dir{color:#4de8ff;margin-left:5px;font-size:10px}
+#dv-body thead th .dir{color:#4de8ff;margin-left:5px;font-size:11px}
 
 /* 列幅リサイザ */
 #dv-body thead th .resizer{position:absolute;
@@ -366,16 +366,16 @@ canvas{display:block;position:fixed;inset:0}
 #dv-body thead th .resizer.active{background:#4de8ff;box-shadow:0 0 8px #0cf}
 
 /* 密度切替 */
-#dv-body.dense thead th[data-col]{padding:6px 14px 4px 11px;font-size:10px}
-#dv-body.dense tbody td{padding:3px 8px;font-size:11px}
+#dv-body.dense thead th[data-col]{padding:6px 14px 4px 11px;font-size:11px}
+#dv-body.dense tbody td{padding:3px 8px;font-size:12px}
 
 /* 結果ペイン */
 #dv-result-body th{
   position:sticky;top:0;background:#06213a;color:#ffd166;
-  z-index:2;font-weight:600;font-size:11px;
+  z-index:2;font-weight:600;font-size:12px;
   padding:10px 14px 8px 11px;
   box-shadow:inset 0 -2px 0 #0cf4,0 2px 8px #0008}
-#dv-result-body td{padding:6px 11px;font-size:12px}
+#dv-result-body td{padding:6px 11px;font-size:13px}
 #dv-result-body td.null{color:#446;font-style:italic}
 #dv-result-body td.num{color:#7dff9b;text-align:right;
   font-variant-numeric:tabular-nums}
@@ -399,7 +399,7 @@ canvas{display:block;position:fixed;inset:0}
   box-shadow:inset 1px 0 0 #0cf2,inset -1px 0 0 #0cf2}
 
 /* ─── 通常セル ─── */
-#dv-body tbody td{padding:4px 8px;font-size:12px}
+#dv-body tbody td{padding:5px 8px;font-size:13px}
 #dv-body tbody tr:hover td{background:#0cf12}
 #dv-body tbody tr:hover td.frozen{background:#0f2438}
 #dv-body tbody tr:hover td.rowid-col{background:#0d1c2c;color:#9fe8ff}
@@ -455,7 +455,7 @@ canvas{display:block;position:fixed;inset:0}
 #dv-body td input:not(.rowchk){
   width:100%;background:#020711;color:#9fe8ff;
   border:1px solid #4de8ff;border-radius:3px;padding:3px 6px;
-  font-family:inherit;font-size:12px;outline:none;
+  font-family:inherit;font-size:13px;outline:none;
   box-shadow:0 0 12px #0cf5}
 
 /* ─── 行選択チェックボックス ─── */
@@ -482,7 +482,7 @@ canvas{display:block;position:fixed;inset:0}
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M3 6 L9 6' fill='none' stroke='%2300181f' stroke-width='2.2' stroke-linecap='round'/></svg>")}
 
 /* ─── フッタ ─── */
-#dv-foot{padding:6px 14px;font-size:10px;color:#7a9cb0;
+#dv-foot{padding:6px 14px;font-size:11px;color:#7a9cb0;
   letter-spacing:1px;border-top:1px solid #0cf2;
   flex-shrink:0;background:#040a15f0;min-height:30px}
 #dv-foot > div{display:flex;align-items:center;gap:8px;width:100%}
@@ -490,13 +490,13 @@ canvas{display:block;position:fixed;inset:0}
 #dv-foot .spacer{flex:1}
 .pg{background:transparent;border:1px solid #0cf5;color:#4de8ff;
   padding:3px 9px;border-radius:4px;cursor:pointer;font-family:inherit;
-  font-size:11px;min-width:26px}
+  font-size:12px;min-width:26px}
 .pg:hover:not(:disabled){background:#0cf2}
 .pg:disabled{opacity:.25;cursor:default}
 #dv-limit{background:#020610;color:#eaf6ff;border:1px solid #0cf4;
-  border-radius:4px;padding:3px 6px;font-family:inherit;font-size:11px;
+  border-radius:4px;padding:3px 6px;font-family:inherit;font-size:12px;
   outline:none;cursor:pointer}
-#dv-hidden-note{color:#a06bff;font-size:10px;letter-spacing:1px;display:none}
+#dv-hidden-note{color:#a06bff;font-size:11px;letter-spacing:1px;display:none}
 #dv-hidden-note.show{display:inline}
 
 #dv-limit option{
@@ -518,7 +518,7 @@ canvas{display:block;position:fixed;inset:0}
   border:1px solid #0cf5;border-radius:8px;
   box-shadow:0 0 40px #000c,0 0 20px #0cf4;
   padding:5px;min-width:180px;display:none;
-  font-size:11px;letter-spacing:.5px}
+  font-size:12px;letter-spacing:.5px}
 #ctx.open{display:block}
 #ctx .ci{padding:7px 12px;color:#cfe6f5;cursor:pointer;
   border-radius:4px;display:flex;align-items:center;gap:8px;
@@ -526,15 +526,15 @@ canvas{display:block;position:fixed;inset:0}
 #ctx .ci:hover{background:#0cf3;color:#fff}
 #ctx .ci.danger{color:#ff8ba0}
 #ctx .ci.danger:hover{background:#f002;color:#fff}
-#ctx .ci .k{color:#7a9cb0;font-size:9px;margin-left:auto}
+#ctx .ci .k{color:#7a9cb0;font-size:10px;margin-left:auto}
 #ctx .sep{height:1px;background:#0cf3;margin:4px 0}
-#ctx .lbl{padding:5px 12px 3px;font-size:9px;color:#4de8ff;
+#ctx .lbl{padding:5px 12px 3px;font-size:10px;color:#4de8ff;
   letter-spacing:2px}
 
 /* ═══════════════════════════════════════════════════════════
    5. SQLバー
    ═══════════════════════════════════════════════════════════ */
-#sqlbar{position:fixed;left:230px;right:20px;top:10px;bottom:auto;z-index:30;
+#sqlbar{position:fixed;left:250px;right:20px;top:10px;bottom:auto;z-index:30;
   background:#040a15f5;backdrop-filter:blur(18px);
   border:1px solid #0cf5;border-radius:10px;
   box-shadow:0 0 40px #000c,0 0 24px #0cf3,inset 0 0 20px #0cf08;
@@ -553,7 +553,7 @@ canvas{display:block;position:fixed;inset:0}
 
 /* ─── ステータス行（統一） ─── */
 #sqlmeta{display:flex;align-items:center;gap:10px;
-  padding:0 14px 8px;font-size:10px;letter-spacing:1px;
+  padding:0 14px 8px;font-size:11px;letter-spacing:1px;
   color:#7a9cb0;min-height:16px}
 #sqlmeta b{color:#ffd166;font-weight:500}
 #sqlmeta .sp{margin-left:auto;color:#5a7c96}
@@ -561,7 +561,7 @@ canvas{display:block;position:fixed;inset:0}
 
 /* ステータステキスト（状態で色分け） */
 #sqlstatus{
-  font-size:11px;
+  font-size:12px;
   font-weight:600;
   letter-spacing:1px;
   color:#95b8cc;
@@ -583,10 +583,10 @@ canvas{display:block;position:fixed;inset:0}
   max-height:260px;overflow:auto;display:none;
   box-shadow:0 0 40px #000c;z-index:50}
 #sqlhist.show{display:block}
-#sqlhist .h{padding:6px 14px;font-size:9px;letter-spacing:3px;
+#sqlhist .h{padding:6px 14px;font-size:10px;letter-spacing:3px;
   color:#4de8ff;border-bottom:1px solid #0cf2;
   position:sticky;top:0;background:#040a15f5}
-#sqlhist .it{padding:8px 14px;font-size:12px;color:#9fe8ff;
+#sqlhist .it{padding:8px 14px;font-size:13px;color:#9fe8ff;
   cursor:pointer;border-bottom:1px solid #0cf15;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #sqlhist .it:hover{background:#0cf1;color:#fff}
@@ -595,7 +595,7 @@ canvas{display:block;position:fixed;inset:0}
 #sqlmodes{display:flex;gap:0;padding:6px 12px 0;border-bottom:1px solid #0cf2}
 #sqlmodes button{background:transparent;
   border:1px solid #0cf3;border-bottom:0;
-  color:#7a9cb0;font-family:inherit;font-size:10px;
+  color:#7a9cb0;font-family:inherit;font-size:11px;
   letter-spacing:2px;padding:4px 16px;cursor:pointer;
   border-radius:4px 4px 0 0;transition:.15s;
   margin-right:4px}
@@ -632,7 +632,7 @@ canvas{display:block;position:fixed;inset:0}
 }
 
 #sqlbar.asking #sqlstatus{
-  font-size:12px;
+  font-size:13px;
   color:#c9a0ff;
   text-shadow:0 0 6px #a06bff8;
 }
@@ -650,7 +650,7 @@ canvas{display:block;position:fixed;inset:0}
 /* 選択テーブルのSELECT文ボタン */
 #sql-select{
   background:#0cf1;border:1px solid #0cf5;color:#9fe8ff;
-  font-family:inherit;font-size:10px;letter-spacing:1px;
+  font-family:inherit;font-size:11px;letter-spacing:1px;
   padding:3px 10px;border-radius:4px;cursor:pointer;
   transition:.15s;margin-left:8px;
 }
@@ -666,7 +666,7 @@ canvas{display:block;position:fixed;inset:0}
 /* 整形ボタン */
 #sql-format{
   background:transparent;border:1px solid #0cf4;color:#95b8cc;
-  font-family:inherit;font-size:10px;letter-spacing:1px;
+  font-family:inherit;font-size:11px;letter-spacing:1px;
   padding:3px 10px;border-radius:4px;cursor:pointer;
   transition:.15s;margin-left:8px}
 #sql-format:hover{background:#0cf2;color:#9fe8ff;border-color:#4de8ff}
@@ -684,7 +684,7 @@ canvas{display:block;position:fixed;inset:0}
   background:#0cf3;
   color:#4de8ff;
   border-radius:3px;
-  font-size:10px;
+  font-size:11px;
   letter-spacing:1px;
   cursor:pointer;
   vertical-align:middle;
@@ -715,7 +715,7 @@ canvas{display:block;position:fixed;inset:0}
   display:flex;align-items:center;gap:10px;
   padding:10px 16px;
   border-bottom:1px solid #0cf3;
-  font-size:11px;letter-spacing:1px;color:#4de8ff;
+  font-size:12px;letter-spacing:1px;color:#4de8ff;
 }
 #cellview .head .col{color:#ffd166;font-weight:700;}
 #cellview .head .len{color:#7a9cb0;margin-left:6px;}
@@ -723,26 +723,26 @@ canvas{display:block;position:fixed;inset:0}
 #cellview .head button{
   background:transparent;border:1px solid #0cf5;color:#4de8ff;
   padding:4px 12px;border-radius:4px;cursor:pointer;
-  font-family:inherit;font-size:10px;letter-spacing:1px;
+  font-family:inherit;font-size:11px;letter-spacing:1px;
 }
 #cellview .head button:hover{background:#0cf3;color:#fff;}
 #cellview .body{
   flex:1;overflow:auto;padding:16px 20px;
-  font-family:inherit;font-size:12px;line-height:1.75;
+  font-family:inherit;font-size:13px;line-height:1.75;
   color:#cfe6f5;white-space:pre-wrap;word-break:break-all;
   user-select:text;cursor:text;
 }
 
 /* ヒント */
 #hint{position:fixed;right:20px;bottom:20px;z-index:10;
-  font-size:10px;color:#5a7c96;letter-spacing:1px;text-align:right;
+  font-size:11px;color:#5a7c96;letter-spacing:1px;text-align:right;
   line-height:1.7;pointer-events:none}
 #hint b{color:#4de8ff;font-weight:500}
 
 /* トースト */
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
   padding:9px 20px;background:#040a15ee;border:1px solid #0cf6;
-  border-radius:6px;font-size:11px;letter-spacing:1px;color:#4de8ff;
+  border-radius:6px;font-size:12px;letter-spacing:1px;color:#4de8ff;
   box-shadow:0 0 24px #0cf4;z-index:50;opacity:0;transition:.25s;
   pointer-events:none;backdrop-filter:blur(10px)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
@@ -762,7 +762,7 @@ canvas{display:block;position:fixed;inset:0}
 #boot.hide{opacity:0;pointer-events:none}
 #boot h1{font-size:42px;letter-spacing:14px;color:#4de8ff;
   text-shadow:0 0 30px #0cf,0 0 80px #0cf6;margin-bottom:10px}
-#boot p{font-size:11px;letter-spacing:4px;color:#7a9cb0}
+#boot p{font-size:12px;letter-spacing:4px;color:#7a9cb0}
 
 /* ═══════════════════════════════════════════════════════════
    ドラッグ & ドロップ

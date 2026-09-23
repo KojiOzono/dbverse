@@ -73,7 +73,7 @@ async function initMenu() {
 // ═══════════════════════════════════════════════════════
 // ER図 初期化（2D / 3D 統合）
 // ═══════════════════════════════════════════════════════
-const ER3D = { currentMode: '2d' };
+const ER3D = { currentMode: '3d' };
 
 function openTableFromER(name) {
   state.currentTable = name;
@@ -137,11 +137,21 @@ async function setERMode(mode) {
       toast('3D表示失敗: ' + e.message);
       vp2d.style.display = 'block';
       vp3d.style.display = 'none';
+      // 2D がまだなら初期化してからフォールバック
+      if (!M_ER2D.isReady()) {
+        try { await initER2D(); } catch {}
+      }
       setERMode('2d');
     }
   } else {
     vp3d.style.display = 'none';
     vp2d.style.display = 'block';
+    // 2D 未初期化なら初期化
+    if (!M_ER2D.isReady()) {
+      try { await initER2D(); } catch (e) {
+        console.error('2D init failed:', e);
+      }
+    }
     setTimeout(() => {
       if (M_ER2D.isReady()) M_ER2D.fit();
     }, 50);
@@ -160,11 +170,12 @@ $$('.menu-item').forEach(btn => {
     } else if (goto === 'er') {
       showView('er');
       try {
+        // 2D を裏で初期化（トグル切替のため）
         if (!M_ER2D.isReady()) {
-          await initER2D();
-        } else {
-          setTimeout(fitER, 100);
+          initER2D().catch(e => console.warn('2D init failed:', e));
         }
+        // 初回は 3D を表示
+        await setERMode('3d');
       } catch (e) {
         console.error('ER init failed:', e);
         toast('ER表示失敗: ' + e.message);
@@ -349,7 +360,6 @@ const askRun = $('#ask-run');
 const askLog = $('#ask-log');
 const askInputClear = $('#ask-input-clear');
 
-// ─── 入力クリアボタン ──────────────────
 if (askInputClear) {
   askInputClear.addEventListener('click', () => {
     askInput.value = '';

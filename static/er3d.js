@@ -186,19 +186,18 @@ export function buildER() {
       const dstT = state.schema.tables.find(x => x.name === fk.to_table);
       if (!dstT) return;
 
-      // 仮の曲線（animate で毎フレーム更新される）
+
+      // 仮の直線（animate で毎フレーム更新される）
       const p0 = new THREE.Vector3(src.x, src.y, src.z);
       const p3 = new THREE.Vector3(dst.x, dst.y, dst.z);
-      const p1 = new THREE.Vector3().lerpVectors(p0, p3, 0.3);
-      const p2 = new THREE.Vector3().lerpVectors(p0, p3, 0.7);
-      const curve = new THREE.CatmullRomCurve3([p0, p1, p2, p3]);
+      const curve = new THREE.LineCurve3(p0, p3);
 
       const tube = new THREE.Mesh(
         new THREE.TubeGeometry(curve, 40, 0.06, 6, false),
         new THREE.MeshBasicMaterial({
           color: 0xa06bff, transparent: true, opacity: 0.32,
           blending: THREE.AdditiveBlending, depthWrite: false}));
-      tube.visible = false;
+      // 常時表示：visible=false は付けない
       state.erGroup.add(tube);
 
       const dots = [];
@@ -207,7 +206,7 @@ export function buildER() {
         const d = new THREE.Mesh(dg, new THREE.MeshBasicMaterial({
           color: 0xc9a0ff, transparent: true, opacity: 0.95,
           blending: THREE.AdditiveBlending, depthWrite: false}));
-        d.visible = false;
+        // 常時表示：visible=false は付けない
         state.erGroup.add(d); dots.push(d);
       }
 
@@ -250,6 +249,8 @@ function makeERCard(t) {
   };
 }
 
+
+
 function makeERTexture(t, texH) {
   const cv = document.createElement('canvas');
   const TEX_DPR = 3;
@@ -271,17 +272,22 @@ function makeERTexture(t, texH) {
   g.lineWidth = 3;
   g.strokeRect(1.5, 1.5, TEX_W - 3, texH - 3);
 
+  // ヘッダ左のアクセントバー
   g.fillStyle = '#4de8ff';
-  g.fillRect(24, 24, 6, 52);
+  g.fillRect(30, 30, 10, 76);
 
+  // テーブル名
   g.fillStyle = '#eaf6ff';
-  g.font = 'bold 40px "SF Mono","Courier New",monospace';
+  g.font = '56px "SF Mono","Courier New",monospace';
   g.textBaseline = 'middle';
-  g.fillText(truncate(shortenName(t.name), 26), 46, 48);
+  g.fillText(truncate(shortenName(t.name), 18), 60, 62);
 
-  g.fillStyle = '#5a7c96';
-  g.font = '20px "SF Mono","Courier New",monospace';
-  g.fillText(t.rows + ' rows · ' + t.columns.length + ' cols', 46, 80);
+  // メタ情報（右寄せで同じ行に）
+  g.fillStyle = '#eaf6ff';
+  g.font = '26px "SF Mono","Courier New",monospace';
+  g.textAlign = 'right';
+  g.fillText(t.rows + ' rows · ' + t.columns.length + ' cols', TEX_W - 30, 62);
+  g.textAlign = 'left';
 
   g.strokeStyle = 'rgba(77,232,255,0.3)';
   g.lineWidth = 2;
@@ -305,27 +311,31 @@ function makeERTexture(t, texH) {
 
     if (isFK) {
       g.fillStyle = 'rgba(160,107,255,0.14)';
-      g.fillRect(0, y - ROW_PX/2 + 2, TEX_W, ROW_PX - 4);
+      g.fillRect(0, y - ROW_PX/2 + 4, TEX_W, ROW_PX - 8);
     }
 
+    // アイコン
     g.fillStyle = iconColor;
-    g.font = '22px "SF Mono","Courier New",monospace';
-    g.fillText(icon, 26, y);
+    g.font = '40px "SF Mono","Courier New",monospace';
+    g.fillText(icon, 34, y);
 
-    g.fillStyle = isPK ? '#ffd166' : (isFK ? '#c9a0ff' : '#cfe6f5');
-    g.font = (isPK ? 'bold ' : '') + '22px "SF Mono","Courier New",monospace';
-    g.fillText(truncate(c.name, 22), 60, y);
+    // カラム名
+    g.fillStyle = isPK ? '#ffd166' : (isFK ? '#c9a0ff' : '#eaf6ff');
+    g.font = '44px "SF Mono","Courier New",monospace';
+    g.fillText(truncate(c.name, 20), 92, y);
 
+    // NOT NULL
     if (c.notnull && !isPK) {
       g.fillStyle = '#ff8ba0';
-      g.font = 'bold 16px "SF Mono","Courier New",monospace';
-      g.fillText('*', TEX_W - 200, y - 6);
+      g.font = '30px "SF Mono","Courier New",monospace';
+      g.fillText('*', TEX_W - 250, y - 8);
     }
 
-    g.fillStyle = '#5a7c96';
-    g.font = '17px "SF Mono","Courier New",monospace';
+    // 型名
+    g.fillStyle = '#95b8cc';
+    g.font = '30px "SF Mono","Courier New",monospace';
     g.textAlign = 'right';
-    g.fillText(c.type, TEX_W - 26, y);
+    g.fillText(c.type, TEX_W - 34, y);
     g.textAlign = 'left';
 
     y += ROW_PX;
@@ -339,6 +349,8 @@ function makeERTexture(t, texH) {
   tex.needsUpdate = true;
   return tex;
 }
+
+
 
 /* ═══════════ CAMERA ═══════════ */
 function ease(t) { return t < 0.5 ? 2*t*t : -1 + (4-2*t)*t; }
@@ -431,9 +443,10 @@ function onPointerMove(e) {
     }
     state.erCards.forEach(c => { c.relTarget = related.has(c.name) ? 1 : 0; });
     state.fkLines.forEach(b => {
-      const show = n && (b.from === n || b.to === n);
-      b.mesh.visible = !!show;
-      b.dots.forEach(d => { d.visible = !!show; });
+      // 非ホバー時は全表示、ホバー時は関連のみ
+      const show = !n || (b.from === n || b.to === n);
+      b.mesh.visible = show;
+      b.dots.forEach(d => { d.visible = show; });
     });
   }
   document.body.style.cursor = hits.length ? 'pointer' : 'default';
@@ -484,8 +497,7 @@ export function animate() {
     });
 
     state.fkLines.forEach(b => {
-      if (!b.mesh.visible) return;
-
+      // 常時更新（表示状態に関わらず曲線を最新位置に保つ）
       const srcCard = state.erCards.find(c => c.name === b.from);
       const dstCard = state.erCards.find(c => c.name === b.to);
       if (!srcCard || !dstCard) return;
@@ -500,24 +512,11 @@ export function animate() {
         .applyQuaternion(dstCard.plane.quaternion)
         .add(dstCard.group.position);
 
-      const dx = p3.x - p0.x, dz = p3.z - p0.z;
-      const dist = Math.sqrt(dx*dx + dz*dz) || 1;
-      const perpX = -dz / dist, perpZ = dx / dist;
-      const bend = Math.min(dist * 0.18, 8);
-      const midY = Math.max(p0.y, p3.y) + 1.5;
-
-      const p1 = new THREE.Vector3(
-        p0.x + dx * 0.30 + perpX * bend, midY, p0.z + dz * 0.30 + perpZ * bend);
-      const p2 = new THREE.Vector3(
-        p0.x + dx * 0.70 + perpX * bend, midY, p0.z + dz * 0.70 + perpZ * bend);
-
-      b.curve.points[0].copy(p0);
-      b.curve.points[1].copy(p1);
-      b.curve.points[2].copy(p2);
-      b.curve.points[3].copy(p3);
+      b.curve.v1.copy(p0);
+      b.curve.v2.copy(p3);
 
       b.mesh.geometry.dispose();
-      b.mesh.geometry = new THREE.TubeGeometry(b.curve, 40, 0.06, 6, false);
+      b.mesh.geometry = new THREE.TubeGeometry(b.curve, 1, 0.06, 6, false);
 
       b.phase += dt*0.25;
       b.dots.forEach((d, i) => {

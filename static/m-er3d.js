@@ -5,11 +5,11 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-const CARD_W    = 7.0;
+const CARD_W    = 7.0;   // 8.4 → 7.0（PC版と同じ）
 const TEX_W     = 768;
-const HEADER_PX = 100;
-const ROW_PX    = 44;
-const PAD_PX    = 24;
+const HEADER_PX = 100;   // 140 → 100
+const ROW_PX    = 44;    // 76  → 44
+const PAD_PX    = 24;    // 32  → 24
 const SCALE_2D_TO_3D = 1 / 30;
 
 // ─── 内部状態 ─────────────────────────────
@@ -295,7 +295,7 @@ function rebuild() {
           blending: THREE.AdditiveBlending, depthWrite: false,
         })
       );
-      tube.visible = false;
+      // 常時表示：visible=false は付けない
       erGroup.add(tube);
 
       const dots = [];
@@ -305,7 +305,7 @@ function rebuild() {
           color: 0xc9a0ff, transparent: true, opacity: 0.95,
           blending: THREE.AdditiveBlending, depthWrite: false,
         }));
-        d.visible = false;
+        // 常時表示：visible=false は付けない
         erGroup.add(d);
         dots.push(d);
       }
@@ -386,7 +386,7 @@ function makeCard(t) {
 
 function makeTexture(t, texH) {
   const cv = document.createElement('canvas');
-  const TEX_DPR = 2;   // モバイルは2倍（PC版は3倍）
+  const TEX_DPR = 2;
   cv.width  = Math.round(TEX_W * TEX_DPR);
   cv.height = Math.round(texH * TEX_DPR);
   const g = cv.getContext('2d');
@@ -405,18 +405,23 @@ function makeTexture(t, texH) {
   g.lineWidth = 3;
   g.strokeRect(1.5, 1.5, TEX_W - 3, texH - 3);
 
+  // ヘッダ左のアクセントバー
   g.fillStyle = '#4de8ff';
-  g.fillRect(24, 24, 6, 52);
+  g.fillRect(30, 30, 10, 76);
 
+  // テーブル名
   g.fillStyle = '#eaf6ff';
-  g.font = 'bold 40px "SF Mono","Courier New",monospace';
+  g.font = '56px "SF Mono","Courier New",monospace';
   g.textBaseline = 'middle';
-  g.fillText(truncate(shortenName(t.name), 26), 46, 48);
+  g.fillText(truncate(shortenName(t.name), 18), 60, 62);
 
-  g.fillStyle = '#5a7c96';
-  g.font = '20px "SF Mono","Courier New",monospace';
-  g.fillText(t.rows + ' rows · ' + t.columns.length + ' cols', 46, 80);
-
+  // メタ情報 ← 右寄せ・同じ行・白
+  g.fillStyle = '#eaf6ff';
+  g.font = '26px "SF Mono","Courier New",monospace';
+  g.textAlign = 'right';
+  g.fillText(t.rows + ' rows · ' + t.columns.length + ' cols', TEX_W - 30, 62);
+  g.textAlign = 'left';
+  // ヘッダ下線
   g.strokeStyle = 'rgba(77,232,255,0.3)';
   g.lineWidth = 2;
   g.beginPath();
@@ -439,27 +444,31 @@ function makeTexture(t, texH) {
 
     if (isFK) {
       g.fillStyle = 'rgba(160,107,255,0.14)';
-      g.fillRect(0, y - ROW_PX / 2 + 2, TEX_W, ROW_PX - 4);
+      g.fillRect(0, y - ROW_PX / 2 + 4, TEX_W, ROW_PX - 8);
     }
 
+    // アイコン（28 → 40）
     g.fillStyle = iconColor;
-    g.font = '22px "SF Mono","Courier New",monospace';
-    g.fillText(icon, 26, y);
+    g.font = '40px "SF Mono","Courier New",monospace';
+    g.fillText(icon, 34, y);
 
-    g.fillStyle = isPK ? '#ffd166' : (isFK ? '#c9a0ff' : '#cfe6f5');
-    g.font = (isPK ? 'bold ' : '') + '22px "SF Mono","Courier New",monospace';
-    g.fillText(truncate(c.name, 22), 60, y);
+    // カラム名（22 → 44）
+    g.fillStyle = isPK ? '#ffd166' : (isFK ? '#c9a0ff' : '#eaf6ff');
+    g.font = (isPK ? '' : '') + '44px "SF Mono","Courier New",monospace';
+    g.fillText(truncate(c.name, 20), 92, y);
 
+    // NOT NULL アスタリスク（20 → 30）
     if (c.notnull && !isPK) {
       g.fillStyle = '#ff8ba0';
-      g.font = 'bold 16px "SF Mono","Courier New",monospace';
-      g.fillText('*', TEX_W - 200, y - 6);
+      g.font = '30px "SF Mono","Courier New",monospace';
+      g.fillText('*', TEX_W - 250, y - 8);
     }
 
-    g.fillStyle = '#5a7c96';
-    g.font = '17px "SF Mono","Courier New",monospace';
+    // 型名（22 → 30）
+    g.fillStyle = '#95b8cc';
+    g.font = '30px "SF Mono","Courier New",monospace';
     g.textAlign = 'right';
-    g.fillText(c.type, TEX_W - 26, y);
+    g.fillText(c.type, TEX_W - 34, y);
     g.textAlign = 'left';
 
     y += ROW_PX;
@@ -474,6 +483,7 @@ function makeTexture(t, texH) {
   tex.needsUpdate = true;
   return tex;
 }
+
 
 // ─── カメラ tween ─────────────────────────
 function ease(t) {
@@ -522,11 +532,11 @@ function onPointerMove(e) {
     }
     cards.forEach(c => { c.relTarget = related.has(c.name) ? 1 : 0; });
 
-    // FK線の表示制御
+    // FK線の表示制御：非ホバー時は全表示、ホバー時は関連のみ
     fkLines.forEach(b => {
-      const show = n && (b.from === n || b.to === n);
-      b.mesh.visible = !!show;
-      b.dots.forEach(d => { d.visible = !!show; });
+      const show = !n || (b.from === n || b.to === n);
+      b.mesh.visible = show;
+      b.dots.forEach(d => { d.visible = show; });
     });
   }
   canvasEl.style.cursor = hits.length ? 'pointer' : 'grab';
@@ -581,7 +591,7 @@ function animate() {
   });
 
   fkLines.forEach(b => {
-    if (!b.mesh.visible) return;
+    // 常時更新（曲線スタイルはそのまま）
     const srcCard = cards.find(c => c.name === b.from);
     const dstCard = cards.find(c => c.name === b.to);
     if (!srcCard || !dstCard) return;

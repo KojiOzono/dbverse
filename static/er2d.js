@@ -1,7 +1,7 @@
 // er2d.js — 2D ER図  v6
 //   ・サーバー保存レイアウト（位置＋パン/ズーム）
 //   ・カード単体ドラッグ（クリックで開く / ドラッグで移動）
-//   ・FK線リアルタイム追従
+//   ・FK線リアルタイム追従（カラム基準ルーティング）
 import {
   state, er2d, api,
   escapeHtml, escapeAttr, shortType, colorForTable, shortenName,
@@ -12,14 +12,13 @@ const NS = 'http://www.w3.org/2000/svg';
 const VERSION = 'v6';
 
 /* ─── モジュール状態 ─── */
-let svgPairs  = [];      // {path, c1, c2, from, to}
+let svgPairs  = [];      // {path, c1, c2, from, to, fromCol, toCol}
 let saveTimer = null;
 
 /* ═══════════════════════════════════════════════════════
    サーバー入出力
    ═══════════════════════════════════════════════════════ */
 async function ensureLayout() {
-  // main.js の initLayout() で取得済み
   return state.layout2d || {};
 }
 
@@ -58,7 +57,6 @@ async function resetLayout() {
     await fetch('/api/layout2d', { method: 'DELETE' });
   } catch (e) {}
 
-  // カードサイズ再確定
   const CARD_W = 210, CARD_COL_H = 22, CARD_HEAD_H = 36;
   state.schema.tables.forEach(t => {
     t._2d = {
@@ -68,10 +66,8 @@ async function resetLayout() {
     };
   });
 
-  // 力指向で再計算
   computeForceLayout(state.schema.tables);
 
-  // state.layout2d を再構築
   state.layout2d = { positions: {}, width: 0, height: 0 };
   let maxX = 0, maxY = 0;
   state.schema.tables.forEach(t => {
@@ -82,7 +78,6 @@ async function resetLayout() {
   state.layout2d.width = maxX + 60;
   state.layout2d.height = maxY + 60;
 
-  // サーバーに保存
   try {
     await fetch('/api/layout2d', {
       method: 'POST',
@@ -95,7 +90,6 @@ async function resetLayout() {
   toast('レイアウトを初期化', 'ok');
 }
 
-/* リセットボタン */
 document.getElementById('btn-reset-layout')?.addEventListener('click', e => {
   e.stopPropagation();
   if (er2d.mode !== '2d') {
@@ -297,28 +291,42 @@ export function computeForceLayout(tables) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   FK線のパス計算
+   FK線のパス計算（カラム基準）
    ═══════════════════════════════════════════════════════ */
-function computePath(A, B) {
-  const dx = B.x - A.x, dy = B.y - A.y;
-  let startX, startY, endX, endY, pathStr;
+/* カラム行の「カード中心からのYオフセット」を返す。
+   実測値 t._2d.colOffsetY があれば優先、無ければ概算。 */
+function columnOffsetY(table, colName) {
+  const measured = table._2d && table._2d.colOffsetY;
+  if (measured && measured[colName] != null) return measured[colName];
 
-  if (Math.abs(dx) > Math.abs(dy)) {
-    startX = dx > 0 ? A.x + A.w/2 : A.x - A.w/2;
-    startY = A.y;
-    endX   = dx > 0 ? B.x - B.w/2 : B.x + B.w/2;
-    endY   = B.y;
-    const midX = (startX + endX) / 2;
-    pathStr = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+  // フォールバック（概算）
+  const idx = table.columns.findIndex(c => c.name === colName);
+  if (idx < 0) return 0;
+  const HEAD = 36, ROW = 22, PAD_TOP = 3;
+  return (HEAD + PAD_TOP + idx * ROW + ROW/2) - table._2d.h/2;
+}
+
+/* カラム位置同士を結ぶ直角ルート */
+function computePath(tableA, tableB, fromCol, toCol) {
+  const A = tableA._2d, B = tableB._2d;
+  const y1 = A.y + columnOffsetY(tableA, fromCol);
+  const y2 = B.y + columnOffsetY(tableB, toCol);
+
+  // 相手が左右どちらにあるかで、接続する辺を決める
+  const dx = B.x - A.x;
+  let x1, x2;
+  if (dx >= 0) {
+    x1 = A.x + A.w/2;   // A の右辺
+    x2 = B.x - B.w/2;   // B の左辺
   } else {
-    startX = A.x;
-    startY = dy > 0 ? A.y + A.h/2 : A.y - A.h/2;
-    endX   = B.x;
-    endY   = dy > 0 ? B.y - B.h/2 : B.y + B.h/2;
-    const midY = (startY + endY) / 2;
-    pathStr = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY}`;
+    x1 = A.x - A.w/2;   // A の左辺
+    x2 = B.x + B.w/2;   // B の右辺
   }
-  return { startX, startY, endX, endY, pathStr };
+
+  const midX = (x1 + x2) / 2;
+  const pathStr = `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+
+  return { startX: x1, startY: y1, endX: x2, endY: y2, pathStr };
 }
 
 /* ─── 特定テーブルに関係するFK線だけ更新 ─── */
@@ -328,10 +336,11 @@ function updateFkLinesFor(tableName) {
 
   svgPairs.forEach(pair => {
     if (pair.from !== tableName && pair.to !== tableName) return;
-    const A = nameToTable[pair.from]?._2d;
-    const B = nameToTable[pair.to]?._2d;
-    if (!A || !B) return;
-    const { startX, startY, endX, endY, pathStr } = computePath(A, B);
+    const A = nameToTable[pair.from];
+    const B = nameToTable[pair.to];
+    if (!A || !B || !A._2d || !B._2d) return;
+    const { startX, startY, endX, endY, pathStr } =
+      computePath(A, B, pair.fromCol, pair.toCol);
     pair.path.setAttribute('d', pathStr);
     pair.c1.setAttribute('cx', startX);
     pair.c1.setAttribute('cy', startY);
@@ -371,6 +380,7 @@ export async function build2D() {
       w: CARD_W,
       h: CARD_HEAD_H + t.columns.length * CARD_COL_H + 8,
       x: 0, y: 0,
+      colOffsetY: {},
     };
 
     const el = make2DCard(t);
@@ -383,17 +393,33 @@ export async function build2D() {
 
   void cards.offsetHeight;
 
+  // カードサイズと、各カラム行の「カード中心からのYオフセット」を実測
   state.schema.tables.forEach(t => {
     const el = elements[t.name];
     const mh = el.offsetHeight;
     const mw = el.offsetWidth;
     if (mh > 0) t._2d.h = mh;
     if (mw > 0) t._2d.w = mw;
+
+    const colsBox = el.querySelector('.er2d-cols');
+    const colEls  = colsBox ? colsBox.querySelectorAll('.er2d-col') : [];
+    const boxTop  = colsBox ? colsBox.offsetTop : 0;
+    const centerY = t._2d.h / 2;
+
+    t._2d.colOffsetY = {};
+    t.columns.forEach((c, i) => {
+      const colEl = colEls[i];
+      if (colEl) {
+        // colEl.offsetTop は .er2d-card 基準なので、ヘッダ高さはすでに含まれる
+        t._2d.colOffsetY[c.name] =
+          colEl.offsetTop + colEl.offsetHeight / 2 - centerY;
+      }
+    });
   });
 
   if (viewport) viewport.style.transform = savedTransform;
 
-  // レイアウト：state.layout2d を使う（無ければ力指向で計算）
+  // レイアウト
   let bounds;
   if (state.layout2d && state.layout2d.positions) {
     state.schema.tables.forEach(t => {
@@ -427,7 +453,7 @@ export async function build2D() {
   svg.setAttribute('width',  bounds.width  + 'px');
   svg.setAttribute('height', bounds.height + 'px');
 
-  // 直角ルーティング
+  // 直角ルーティング（カラム基準）
   state.schema.tables.forEach(t => {
     t.fks.forEach(fk => {
       const dst = nameToTable[fk.to_table];
@@ -435,7 +461,7 @@ export async function build2D() {
       if (t.name === dst.name) return;
 
       const { startX, startY, endX, endY, pathStr } =
-        computePath(t._2d, dst._2d);
+        computePath(t, dst, fk.from_col, fk.to_col);
 
       const path = document.createElementNS(NS, 'path');
       path.setAttribute('d', pathStr);
@@ -464,11 +490,15 @@ export async function build2D() {
       c2.setAttribute('stroke-width', '1.4');
       svg.appendChild(c2);
 
-      svgPairs.push({ path, c1, c2, from: t.name, to: dst.name });
+      svgPairs.push({
+        path, c1, c2,
+        from: t.name, to: dst.name,
+        fromCol: fk.from_col, toCol: fk.to_col,
+      });
     });
   });
 
-  // 保存済みの view があれば適用、なければフィット
+  // 保存済みビュー適用 or フィット
   if (state.layout2d && state.layout2d.view &&
       typeof state.layout2d.view.tx === 'number' &&
       typeof state.layout2d.view.ty === 'number' &&
@@ -526,7 +556,6 @@ function make2DCard(t) {
 
   el.innerHTML = html;
 
-  // ホバーで関係FK線を強調
   el.addEventListener('mouseenter', () => {
     document.querySelectorAll('#er2d-svg path').forEach(p => {
       const related = (p.dataset.from === t.name || p.dataset.to === t.name);
@@ -548,7 +577,7 @@ function make2DCard(t) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   カードドラッグ（クリックで開く / ドラッグで移動）
+   カードドラッグ
    ═══════════════════════════════════════════════════════ */
 function attachCardDrag(el, t) {
   el.addEventListener('mousedown', e => {
@@ -643,7 +672,7 @@ function apply2DTransform() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   VIEWPORT EVENTS（パン / ズーム）
+   VIEWPORT EVENTS
    ═══════════════════════════════════════════════════════ */
 function bind2DEvents() {
   const view = document.getElementById('er2d');
