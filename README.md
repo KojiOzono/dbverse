@@ -2,6 +2,8 @@
 
 3D ER図 + Text-to-SQL のデータベースクライアント。
 
+![3D ER図](docs/images/er3.png)
+
 デモ: https://dbverse.vlabos.com/
 デモのLLMはARM 2コアのCPU + Gemma E2B なので、自然言語は雰囲気程度です。
 DBは3時間おきにリセットされます。
@@ -13,12 +15,17 @@ DBは3時間おきにリセットされます。
 
 - **3D ER図** — テーブルを立体的に表示。リレーション線をリアルタイムで描画
 - **2D ER図** — 平面レイアウト。カードをドラッグで移動でき、配置はサーバーに保存される
+
+  ![2D ER図](docs/images/er2.png)
+
 - **Text-to-SQL** — 自然言語で質問すると、LLMがSQLを生成して自動実行
 - **ストリーミング表示** — 生成中のSQLをSSEでリアルタイム表示
 - **データビュー** — テーブルの中身を表示・編集・エクスポート
 - **CRUD操作** — 行の追加・編集・削除に対応
 - **ドラッグ&ドロップ** — テーブル名・カラム名をSQLバーに挿入
 - **時系列予測** — SQLの結果をそのままグラフタブに送ると、Chronosによる予測（信頼区間つき）を表示
+
+  ![時系列予測](docs/images/chronos.png)
 
 ## 必要なもの
 
@@ -97,8 +104,13 @@ DBは3時間おきにリセットされます。
     │   ├── graph.js           # グラフタブ / 予測連携
     │   ├── er2d.js
     │   └── er3d.js
-    └── templates/
-        └── index.html
+    ├── templates/
+    │   └── index.html
+    └── docs/
+        └── images/            # README 用画像
+            ├── er3.png
+            ├── er2.png
+            └── chronos.png
 
 ## 技術スタック
 
