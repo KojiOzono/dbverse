@@ -29,6 +29,10 @@ function switchDvTab(view) {
   document.getElementById('foot-result').style.display =
     view === 'result' ? 'flex' : 'none';
   updateHeader();
+
+  if (view === 'graph' && sql.lastQResult) {
+    import('./graph.js').then(m => m.renderGraph(sql.lastQResult));
+  }
 }
 document.querySelectorAll('#dv-tabs .vtab').forEach(t => {
   t.addEventListener('click', () => switchDvTab(t.dataset.view));
@@ -1178,6 +1182,10 @@ function showQueryResult(r) {
   const tab = document.getElementById('vtab-result');
   tab.style.display = '';
   document.getElementById('vtab-result-cnt').textContent = r.rows.length;
+  
+  const gtab = document.getElementById('vtab-graph');
+  if (gtab) gtab.style.display = '';
+  
   renderResultPane(r);
   switchDvTab('result');
 }
@@ -1210,6 +1218,11 @@ function clearQueryResult() {
   resultPaneBody.innerHTML = '';
   const tab = document.getElementById('vtab-result');
   tab.style.display = 'none';
+
+  const gtab = document.getElementById('vtab-graph');
+  if (gtab) gtab.style.display = 'none';
+  if (dv.tab === 'graph') switchDvTab('data');
+
   if (dv.tab === 'result') switchDvTab('data');
 }
 

@@ -1,8 +1,43 @@
-anyio==4.15.1
-certifi==2026.7.22
-h11==0.16.0
-httpcore==1.0.9
+# ═══════════════════════════════════════════════════════════
+#  DBVERSE + Chronos-Service
+#
+#  インストール:
+#    python3 -m venv venv
+#    source venv/bin/activate
+#    pip install -r requirements.txt
+#
+#  CPU版 torch を使う場合（推奨、数GB節約）:
+#    pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
+#  を先に実行してから、この requirements.txt を流すこと。
+# ═══════════════════════════════════════════════════════════
+
+# ─── Web フレームワーク（chronos-service.py） ───
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+
+# ─── HTTP クライアント（server.py → LLM / chronos-service） ───
 httpx==0.28.1
-idna==3.20
+
+# ─── DB 接続（PostgreSQL） ───
 psycopg2-binary==2.9.13
-typing_extensions==4.16.0
+
+# ─── テンプレート ───
+Jinja2==3.1.6
+
+# ─── 時系列予測（Chronos） ───
+chronos-forecasting==2.3.2
+torch==2.14.0+cpu
+numpy==2.5.3
+pandas==3.0.6
+accelerate==1.15.0
+transformers==5.17.0
+huggingface_hub==1.33.0
+safetensors==0.8.0
+einops==0.8.2
+tokenizers==0.23.2
+
+# ─── ユーティリティ（依存で自動的に入るが明示） ───
+python-dotenv==1.2.3
+PyYAML==6.0.3
+tqdm==4.70.1
+psutil==7.2.2

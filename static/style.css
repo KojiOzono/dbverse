@@ -850,3 +850,103 @@ canvas{display:block;position:fixed;inset:0}
 }
 #sql-run:active { background: rgba(63,185,80,0.22); }
 #sql-run:disabled { opacity: .4; cursor: default; }
+
+
+
+/* ═══════════════════════════════════════════════════════════
+   グラフタブ
+   ═══════════════════════════════════════════════════════════ */
+#graph-toolbar{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 14px;border-bottom:1px solid #0cf3;
+  background:#040a15f0;flex-shrink:0;min-height:34px;
+  font-size:11px;color:#7a9cb0;letter-spacing:1px;
+  flex-wrap:wrap;
+}
+#graph-toolbar .graph-label{
+  color:#4de8ff;font-size:11px;letter-spacing:2px;
+  text-transform:uppercase;
+}
+#graph-toolbar .graph-select{
+  background:#020610;color:#eaf6ff;
+  border:1px solid #0cf4;border-radius:4px;
+  padding:3px 6px;font-family:inherit;font-size:12px;
+  outline:none;cursor:pointer;max-width:200px;
+}
+#graph-toolbar .graph-select:focus{
+  border-color:#4de8ff;box-shadow:0 0 8px #0cf5;
+}
+#graph-toolbar .graph-select option{
+  background:#020610;color:#eaf6ff;
+}
+#graph-toolbar .graph-sep{
+  width:1px;height:16px;background:#0cf3;margin:0 4px;
+}
+#graph-toolbar .graph-toggle{
+  display:flex;align-items:center;gap:6px;
+  color:#cfe6f5;cursor:pointer;font-size:12px;
+  letter-spacing:1px;
+}
+#graph-toolbar .graph-toggle input[type="checkbox"]{
+  accent-color:#4de8ff;cursor:pointer;
+}
+#graph-toolbar .graph-toggle input[type="checkbox"]:disabled{
+  opacity:.35;cursor:not-allowed;
+}
+#graph-toolbar .graph-toggle input:disabled + span{
+  color:#5a7c96;
+}
+#graph-toolbar #graph-pred-len{
+  width:140px;accent-color:#4de8ff;
+}
+#graph-toolbar #graph-pred-len:disabled{
+  opacity:.35;
+}
+#graph-toolbar .graph-num{
+  color:#4de8ff;font-weight:600;
+  font-variant-numeric:tabular-nums;
+  min-width:24px;text-align:right;
+  text-shadow:0 0 8px #0cf5;
+}
+#graph-toolbar .spacer{flex:1}
+#graph-toolbar .graph-meta{
+  color:#5a7c96;font-size:11px;
+  letter-spacing:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:40vw;
+}
+
+#graph-body{
+  flex:1;overflow:hidden;
+  background:#03050d;
+  position:relative;
+  min-height:0;
+}
+#graph-body .js-plotly-plot,
+#graph-body .plot-container,
+#graph-body .svg-container{
+  width:100%!important;height:100%!important;
+}
+#graph-body .graph-empty{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  height:100%;color:#5a7c96;
+  font-size:12px;letter-spacing:2px;
+}
+
+.graph-warning{
+  padding:6px 14px;
+  background:rgba(255,209,102,0.08);
+  border-bottom:1px solid rgba(255,209,102,0.3);
+  color:#ffd166;
+  font-size:11px;
+  letter-spacing:1px;
+}
+
+
+.graph-fc-reason{
+  color:#ffd166;
+  font-size:11px;
+  letter-spacing:1px;
+  padding-left:4px;
+}

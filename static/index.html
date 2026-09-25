@@ -158,6 +158,9 @@
     <div class="vtab" data-view="result" id="vtab-result" style="display:none">
       結果<span class="cnt" id="vtab-result-cnt">0</span>
     </div>
+    <div class="vtab" data-view="graph" id="vtab-graph" style="display:none">
+      グラフ
+    </div>
     <span class="spacer"></span>
     <div id="dv-selinfo"></div>
   </div>
@@ -170,6 +173,25 @@
     </div>
     <div class="dvpane" id="pane-result">
       <div id="dv-result-body"></div>
+    </div>
+    <div class="dvpane" id="pane-graph">
+      <div id="graph-toolbar">
+        <label class="graph-label">X</label>
+        <select id="graph-x" class="graph-select"></select>
+        <label class="graph-label">Y</label>
+        <select id="graph-y" class="graph-select"></select>
+        <span class="graph-sep"></span>
+        <label class="graph-toggle">
+          <input type="checkbox" id="graph-fc-toggle" disabled>
+          <span>予測</span>
+        </label>
+        <input type="range" id="graph-pred-len" min="1" max="100" value="10" disabled>
+        <span id="graph-pred-len-val" class="graph-num">10</span>
+        <span id="graph-fc-reason" class="graph-fc-reason"></span>
+        <span class="spacer"></span>
+        <span id="graph-meta" class="graph-meta"></span>
+      </div>
+      <div id="graph-body"></div>
     </div>
   </div>
 

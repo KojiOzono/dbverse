@@ -29,7 +29,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs
 
 try:
-    from config import DB as CONFIG_DB, LLM, SERVER, UI
+    from config import DB as CONFIG_DB, LLM, SERVER, UI, CHRONOS
 except ImportError:
     print("[error] config.py が見つかりません。")
     print("  cp config.sample.py config.py  して編集してください。")
@@ -717,7 +717,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             elif p == "/api/counts":
                 self._api_counts()
             elif p == "/api/config":
-                self._json(UI)
+                self._json({**UI, "chronos": CHRONOS})
             elif p == "/api/ask_sse":
                 params = parse_qs(parsed.query)
                 q = (params.get("q") or [""])[0]
@@ -907,6 +907,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             if p == "/api/query":
                 self._api_query(d)
+            elif p == "/api/forecast":
+                self._api_forecast(d)
             elif p == "/api/ask":
                 self._api_ask(d)
             elif p == "/api/table":
@@ -954,6 +956,27 @@ class Handler(http.server.BaseHTTPRequestHandler):
         r["sql"] = sql
         self._json(r)
 
+    def _api_forecast(self, d):
+        """chronos-service に転送（ブラウザからは見えない）"""
+        if not CHRONOS.get("enabled", False):
+            self._json({"error": "予測機能は無効です"}, 503)
+            return
+        if not CHRONOS.get("url"):
+            self._json({"error": "CHRONOS.url が設定されていません"}, 500)
+            return
+        try:
+            import httpx
+        except ImportError:
+            self._json({"error": "httpx が必要です"}, 500)
+            return
+        try:
+            with httpx.Client(timeout=180.0) as cli:
+                r = cli.post(f"{CHRONOS['url'].rstrip('/')}/predict", json=d)
+                r.raise_for_status()
+                self._json(r.json())
+        except Exception as e:
+            self._json({"error": f"予測サービスエラー: {e}"}, 502)
+            
     def _api_ask(self, d):
         """非ストリーミング版（フォールバック用）"""
         q = (d.get("question") or "").strip()
